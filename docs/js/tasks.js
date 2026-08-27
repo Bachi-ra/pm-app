@@ -1,13 +1,14 @@
-import { escapeHtml, formatDate, memberName, STATUS_LIST, STATUS_CLASS } from './utils.js';
+import { escapeHtml, formatDate, getRoleOptions, EVERYONE_ROLE, STATUS_LIST, STATUS_CLASS } from './utils.js';
 
-const filterState = { assignee: 'all', category: 'all', status: 'all' };
+const filterState = { assigneeRole: 'all', category: 'all', status: 'all' };
 
 export function renderTasks(container, ctx) {
   const { members, tasks, currentMember, isAdmin } = ctx;
   const categories = [...new Set(tasks.map((t) => t.category))].sort();
+  const roleOptions = getRoleOptions(members);
 
   const filtered = tasks.filter((t) => {
-    if (filterState.assignee !== 'all' && t.assigneeId !== filterState.assignee) return false;
+    if (filterState.assigneeRole !== 'all' && t.assigneeRole !== filterState.assigneeRole) return false;
     if (filterState.category !== 'all' && t.category !== filterState.category) return false;
     if (filterState.status !== 'all' && t.status !== filterState.status) return false;
     return true;
@@ -17,8 +18,8 @@ export function renderTasks(container, ctx) {
     <div class="toolbar">
       <div class="filters">
         <select id="filter-assignee">
-          <option value="all">担当者: すべて</option>
-          ${members.map((m) => `<option value="${m.id}" ${filterState.assignee === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+          <option value="all">担当役職: すべて</option>
+          ${roleOptions.map((r) => `<option value="${escapeHtml(r)}" ${filterState.assigneeRole === r ? 'selected' : ''}>${escapeHtml(r)}</option>`).join('')}
         </select>
         <select id="filter-category">
           <option value="all">カテゴリ: すべて</option>
@@ -41,10 +42,10 @@ export function renderTasks(container, ctx) {
         ? '<p class="empty">条件に合うタスクがありません</p>'
         : `<div class="table-scroll"><table class="data-table">
             <thead><tr>
-              <th>タイトル</th><th>カテゴリ</th><th>担当</th><th>状態</th><th>進捗</th><th>期間</th><th></th>
+              <th>タイトル</th><th>カテゴリ</th><th>担当役職</th><th>状態</th><th>進捗</th><th>期間</th><th></th>
             </tr></thead>
             <tbody>
-              ${filtered.map((t) => renderRow(t, members, currentMember, isAdmin)).join('')}
+              ${filtered.map((t) => renderRow(t, currentMember, isAdmin)).join('')}
             </tbody>
           </table></div>`
     }
@@ -53,7 +54,7 @@ export function renderTasks(container, ctx) {
   `;
 
   container.querySelector('#filter-assignee').addEventListener('change', (e) => {
-    filterState.assignee = e.target.value;
+    filterState.assigneeRole = e.target.value;
     renderTasks(container, ctx);
   });
   container.querySelector('#filter-category').addEventListener('change', (e) => {
@@ -102,8 +103,11 @@ export function renderTasks(container, ctx) {
   });
 }
 
-function renderRow(task, members, currentMember, isAdmin) {
-  const isOwner = currentMember && task.assigneeId === currentMember.id;
+function renderRow(task, currentMember, isAdmin) {
+  const myRole = currentMember ? (currentMember.role || '').trim() : '';
+  const isOwner = Boolean(
+    task.assigneeRole && myRole && (task.assigneeRole === EVERYONE_ROLE || task.assigneeRole === myRole)
+  );
   const canQuickEdit = isOwner && !isAdmin;
 
   let actionCell;
@@ -130,7 +134,7 @@ function renderRow(task, members, currentMember, isAdmin) {
       ${task.description ? `<div class="task-desc">${escapeHtml(task.description)}</div>` : ''}
     </td>
     <td>${escapeHtml(task.category)}</td>
-    <td>${escapeHtml(memberName(members, task.assigneeId))}</td>
+    <td>${escapeHtml(task.assigneeRole || '未割当')}</td>
     <td><span class="badge ${STATUS_CLASS[task.status]}">${task.status}</span></td>
     <td><div class="progress-bar" title="${task.progress}%"><div class="progress-fill" style="width:${task.progress}%"></div></div></td>
     <td class="nowrap">${formatDate(task.startDate)} 〜 ${formatDate(task.endDate)}</td>
@@ -162,10 +166,10 @@ function openTaskModal(container, ctx, task) {
               <input type="text" name="category" list="category-list" value="${escapeHtml(task?.category || '')}" placeholder="例: 企画" />
             </div>
             <div class="form-group">
-              <label>担当者</label>
-              <select name="assigneeId">
+              <label>担当役職</label>
+              <select name="assigneeRole">
                 <option value="">未割当</option>
-                ${members.map((m) => `<option value="${m.id}" ${task?.assigneeId === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}
+                ${getRoleOptions(members).map((r) => `<option value="${escapeHtml(r)}" ${task?.assigneeRole === r ? 'selected' : ''}>${escapeHtml(r)}</option>`).join('')}
               </select>
             </div>
           </div>
@@ -229,7 +233,7 @@ function openTaskModal(container, ctx, task) {
       title: form.get('title'),
       description: form.get('description'),
       category: form.get('category'),
-      assigneeId: form.get('assigneeId') || null,
+      assigneeRole: form.get('assigneeRole') || null,
       startDate: form.get('startDate'),
       endDate: form.get('endDate'),
       status: form.get('status'),

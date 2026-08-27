@@ -97,11 +97,6 @@ async function deleteMember(id) {
   }
 
   await removeDoc('members', id);
-
-  const tasks = await getAll('tasks');
-  const orphaned = tasks.filter((t) => t.assigneeId === id);
-  await Promise.all(orphaned.map((t) => updateDocFields('tasks', t.id, { assigneeId: null })));
-
   return null;
 }
 
@@ -123,7 +118,7 @@ async function createTask(data) {
     title,
     description: (data.description || '').trim(),
     category: (data.category || '未分類').trim(),
-    assigneeId: data.assigneeId || null,
+    assigneeRole: (data.assigneeRole || '').trim() || null,
     status,
     progress: status === '完了' ? 100 : clampProgress(data.progress, 0),
     startDate: data.startDate,
@@ -155,7 +150,7 @@ async function updateTask(id, data) {
   if (data.title !== undefined) payload.title = String(data.title).trim();
   if (data.description !== undefined) payload.description = String(data.description).trim();
   if (data.category !== undefined) payload.category = String(data.category).trim() || '未分類';
-  if (data.assigneeId !== undefined) payload.assigneeId = data.assigneeId || null;
+  if (data.assigneeRole !== undefined) payload.assigneeRole = String(data.assigneeRole).trim() || null;
   if (data.startDate !== undefined) payload.startDate = data.startDate;
   if (data.endDate !== undefined) payload.endDate = data.endDate;
 

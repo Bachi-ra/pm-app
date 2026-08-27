@@ -1,10 +1,10 @@
-import { escapeHtml, formatDate, todayIso, addDays, daysBetween, memberName, STATUS_CLASS } from './utils.js';
+import { escapeHtml, formatDate, todayIso, addDays, daysBetween, STATUS_CLASS } from './utils.js';
 
 const DAY_WIDTH = 28;
 const LABEL_WIDTH = 220;
 
 export function renderGantt(container, ctx) {
-  const { tasks, members, milestones, isAdmin } = ctx;
+  const { tasks, milestones, isAdmin } = ctx;
 
   container.innerHTML = `
     <div class="gantt-legend">
@@ -26,10 +26,10 @@ export function renderGantt(container, ctx) {
     return;
   }
 
-  area.appendChild(buildGanttChart(tasks, members, milestones));
+  area.appendChild(buildGanttChart(tasks, milestones));
 }
 
-function buildGanttChart(tasks, members, milestones) {
+function buildGanttChart(tasks, milestones) {
   const allDates = [
     ...tasks.flatMap((t) => [t.startDate, t.endDate]),
     ...milestones.map((m) => m.date),
@@ -85,7 +85,7 @@ function buildGanttChart(tasks, members, milestones) {
 
       const label = `<div class="gantt-label-cell">
         <div class="gantt-task-title" title="${escapeHtml(task.title)}">${escapeHtml(task.title)}</div>
-        <div class="gantt-task-assignee">${escapeHtml(memberName(members, task.assigneeId))}</div>
+        <div class="gantt-task-assignee">${escapeHtml(task.assigneeRole || '未割当')}</div>
       </div>`;
 
       const bar = `<div class="gantt-row-track" style="width:${trackWidth}px;background-image:${weekendBg}">

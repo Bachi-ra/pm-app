@@ -48,9 +48,13 @@ export function addDays(isoDate, n) {
   return d.toISOString().slice(0, 10);
 }
 
-export function memberName(members, id) {
-  const m = members.find((mm) => mm.id === id);
-  return m ? m.name : '未割当';
+export const EVERYONE_ROLE = '全員';
+
+export function getRoleOptions(members) {
+  const roles = [...new Set(members.map((m) => (m.role || '').trim()).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'ja')
+  );
+  return [EVERYONE_ROLE, ...roles];
 }
 
 export function el(tag, attrs = {}, children = []) {

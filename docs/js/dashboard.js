@@ -1,4 +1,9 @@
-import { escapeHtml, formatDate, todayIso, addDays, memberName } from './utils.js';
+import { escapeHtml, formatDate, todayIso, addDays, EVERYONE_ROLE } from './utils.js';
+
+function isAssignedToMember(task, member) {
+  const role = (member.role || '').trim();
+  return Boolean(task.assigneeRole && (task.assigneeRole === EVERYONE_ROLE || (role && task.assigneeRole === role)));
+}
 
 export function renderDashboard(container, ctx) {
   const { members, tasks, milestones, goToTab } = ctx;
@@ -16,7 +21,7 @@ export function renderDashboard(container, ctx) {
   const overdueTasks = tasks.filter((t) => t.status !== '完了' && t.endDate < today);
 
   const workload = members.map((m) => {
-    const mine = tasks.filter((t) => t.assigneeId === m.id);
+    const mine = tasks.filter((t) => isAssignedToMember(t, m));
     const done = mine.filter((t) => t.status === '完了').length;
     const avg = mine.length
       ? Math.round(mine.reduce((sum, t) => sum + t.progress, 0) / mine.length)
@@ -57,8 +62,8 @@ export function renderDashboard(container, ctx) {
             ? '<p class="empty">直近の締切タスクはありません</p>'
             : ''
         }
-        ${overdueTasks.length > 0 ? renderTaskMiniList(overdueTasks, members, true) : ''}
-        ${upcomingTasks.length > 0 ? renderTaskMiniList(upcomingTasks, members, false) : ''}
+        ${overdueTasks.length > 0 ? renderTaskMiniList(overdueTasks, true) : ''}
+        ${upcomingTasks.length > 0 ? renderTaskMiniList(upcomingTasks, false) : ''}
       </div>
 
       <div class="card">
@@ -103,13 +108,13 @@ export function renderDashboard(container, ctx) {
   });
 }
 
-function renderTaskMiniList(list, members, overdue) {
+function renderTaskMiniList(list, overdue) {
   return `<ul class="task-mini-list">
     ${list
       .map(
         (t) => `<li class="${overdue ? 'overdue' : ''}">
           <span class="task-mini-title">${escapeHtml(t.title)}</span>
-          <span class="task-mini-meta">${escapeHtml(memberName(members, t.assigneeId))} / 期限 ${formatDate(t.endDate)}</span>
+          <span class="task-mini-meta">${escapeHtml(t.assigneeRole || '未割当')} / 期限 ${formatDate(t.endDate)}</span>
         </li>`
       )
       .join('')}
