@@ -1,0 +1,13 @@
+rules_version = '2';
+
+// Firebaseコンソール →「Firestore Database」→「ルール」タブに、この内容を貼り付けて
+// 「公開」してください。匿名サインイン済み(アプリを経由してアクセスしてきた)クライアントに
+// 読み書きを許可します。誰が管理者か/誰の担当タスクかといった業務ロジックはアプリの
+// クライアント側(docs/js/*.js)で判定しています。
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

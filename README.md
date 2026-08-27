@@ -1,81 +1,69 @@
-# 卒業制作 進行管理アプリ
+# 卒業制作 進行管理サイト
 
-タスク・スケジュール(ガントチャート)・メンバー表を管理できるWebアプリです。
-データはMongoDB Atlas(無料枠)に保存されるため、PMのPCでローカル起動しても、
-Renderにデプロイした本番URLでも、常に同じデータを共有できます。
+タスク・スケジュール(ガントチャート)・メンバー表を管理できるWebサイトです。
+サーバーは持たず、ブラウザから直接Firebase(Firestore)と通信する構成なので、
+GitHub Pagesにファイルを置くだけで常時アクセス可能なサイトになります。
 
-## 事前準備
+## セットアップ手順(初回のみ)
 
-- Node.js (LTS) がインストールされていること
-  - 未インストールの場合は https://nodejs.org からダウンロードしてインストールしてください
-- MongoDB Atlasの接続文字列(下記「クラウド公開手順」の手順1で取得します)
+### 1. Firebaseプロジェクトを作成
 
-## MongoDB Atlasのセットアップ(初回のみ)
+1. https://console.firebase.google.com にアクセスし、Googleアカウントでログイン
+2. 「プロジェクトを作成」→ 好きなプロジェクト名を入力(Google Analyticsは無効でOK)
+3. 左メニュー「構築」→「Firestore Database」→「データベースを作成」
+   - モードは「本番環境モード」でOK(あとでルールを上書きします)
+   - ロケーションはどこでも構いません(`asia-northeast1` などが近くて安心)
+4. 左メニュー「構築」→「Authentication」→「Sign-in method」タブ→「匿名」を有効化
+   (メンバーがパスワード不要でアプリを使えるようにするためのものです)
 
-1. https://www.mongodb.com/cloud/atlas/register で無料アカウントを作成
-2. 無料クラスタ(M0)を作成(リージョンはどこでもOK、東京リージョンがあれば選択)
-3. 「Database Access」でDB用のユーザー名・パスワードを作成
-4. 「Network Access」で `0.0.0.0/0`(すべてのIPを許可)を追加
-   - Renderの無料プランは接続元IPが固定されないため、この設定が必要です
-5. 「Connect」→「Drivers」から接続文字列(`mongodb+srv://...`)をコピー
+### 2. Webアプリを登録し、設定値を取得
 
-コピーした接続文字列を使って、`pm-app` フォルダ直下に `.env` ファイルを作成してください
-(`.env.example` をコピーしてリネームし、`MONGODB_URI=` の後に貼り付けます)。
+1. プロジェクトのトップ画面(歯車アイコン→「プロジェクトの設定」)→「マイアプリ」→
+   `</>`(ウェブ)アイコンをクリックしてアプリを登録
+2. 表示される `firebaseConfig` オブジェクトの中身をコピー
+3. [docs/js/firebaseClient.js](docs/js/firebaseClient.js) を開き、`firebaseConfig` の
+   プレースホルダー(`YOUR_API_KEY` など)を実際の値に置き換えて保存
 
-既存の `server/data/*.json` にすでにメンバーやタスクを登録済みの場合は、`.env` 設定後に
-一度だけ以下を実行するとAtlas側にデータを移行できます。
+### 3. セキュリティルールを設定
 
-```
-npm install
-node scripts/migrate-json-to-mongo.js
-```
+1. Firebaseコンソール →「Firestore Database」→「ルール」タブ
+2. [firestore.rules](firestore.rules) の内容をそのまま貼り付けて「公開」
 
-## ローカルでの起動方法(PM側)
+### 4. 既存データの移行(以前MongoDBを使っていた場合のみ)
 
-### 方法A: ダブルクリックで起動
-
-`start.bat` をダブルクリックしてください。初回のみ自動で必要なパッケージが
-インストールされます。
-
-### 方法B: コマンドで起動
-
-```
-npm install   （初回のみ）
-npm start
-```
-
-サーバーを止めるには、起動しているウィンドウを閉じるか `Ctrl + C` を押してください。
-
-## クラウド公開手順(PMのPCがオフラインでも常時アクセス可能にする)
-
-Render.com(無料Webサービス)にデプロイすることで、URLさえ共有すれば誰でも
-いつでもアクセスできるようになります。PMのPCを起動しておく必要はありません。
-
-1. **MongoDB Atlasのセットアップ**(上記参照、まだの場合は先に実施)
-2. **GitHubにpush**
+1. プロジェクト直下に `.env` を作成し、以前使っていた `MONGODB_URI` を設定
+2. Firebaseコンソール →「プロジェクトの設定」→「サービスアカウント」→
+   「新しい秘密鍵の生成」でJSONファイルをダウンロードし、プロジェクト直下に
+   `serviceAccountKey.json` として保存(このファイルは`.gitignore`済みで、
+   GitHubには絶対にpushされません)
+3. 以下を実行
 
    ```
-   git init
-   git add .
-   git commit -m "Initial commit"
+   npm install
+   npm run migrate
    ```
 
-   GitHub.comで新しい空リポジトリを作成し、表示されるコマンドに従って push します
-   (例: `git remote add origin <リポジトリURL>` → `git push -u origin main`)
+移行が不要な場合は、後述の「初回セットアップ(アプリ側)」からそのまま始めてください。
 
-3. **Renderでデプロイ**
-   - https://render.com でアカウント作成(GitHubアカウントでログイン可)
-   - 「New +」→「Blueprint」を選択し、pushしたリポジトリを指定
-     (リポジトリ内の `render.yaml` が自動で読み込まれます)
-   - `MONGODB_URI` を聞かれるので、Atlasの接続文字列を入力してデプロイ
-   - デプロイ完了後に発行されるURL(例: `https://pm-app-xxxx.onrender.com`)を
-     メンバーに共有してください
+### 5. GitHub Pagesを有効化
 
-4. **無料プランの注意点**
-   - 15分間アクセスが無いとサーバーがスリープします。スリープ後の最初のアクセスは
-     起動に30〜50秒ほどかかりますが、その後は通常通り動作します
-   - ローカル(`start.bat`)と本番URLは同じMongoDB Atlasを見ているため、
-     どちらからアクセスしてもデータは共通です
+1. GitHubのリポジトリページ →「Settings」→ 左メニュー「Pages」
+2. 「Build and deployment」の「Source」を「Deploy from a branch」に
+3. 「Branch」を `main` / `/docs` に設定して「Save」
+4. 数十秒〜数分待つと、ページ上部に公開URL(例:
+   `https://bachi-ra.github.io/pm-app/`)が表示されます
+
+このURLがメンバー共有用のURLになります。今後 `main` ブランチにpushするたびに
+自動でサイトが更新されます。
+
+## ローカルでの動作確認
+
+```
+npx serve docs
+```
+
+を実行し、表示されたURL(例: `http://localhost:3000`)をブラウザで開くと、
+本番と同じ内容をローカルで確認できます(サーバー不要、静的ファイルを配信するだけです)。
 
 ## 初回セットアップ(アプリ側)
 
@@ -96,14 +84,16 @@ Render.com(無料Webサービス)にデプロイすることで、URLさえ共�
 
 ## データの保存場所・バックアップ
 
-データはMongoDB Atlasに保存されます(`members` / `tasks` / `milestones` の3コレクション)。
-バックアップを取りたい場合はAtlasのダッシュボードからエクスポートするか、
-`node scripts/migrate-json-to-mongo.js` と同様の要領で読み出しスクリプトを作成してください。
+データはFirebase Firestoreに保存されます(`members` / `tasks` / `milestones` の
+3コレクション)。Firebaseコンソールの「Firestore Database」からいつでも中身を確認・
+エクスポートできます。
 
 ## 権限について
 
 - 管理者(PM): メンバー・タスク・マイルストーンをすべて追加/編集/削除可能
 - 一般メンバー: 全データの閲覧、自分が担当するタスクのステータス・進捗の更新のみ可能
 
-このアプリは身内の小規模チームでの利用を想定しており、パスワード認証は行っていません。
-URLを知っていれば誰でもアクセスできるため、URLの共有範囲には注意してください。
+権限のチェックはブラウザ側(画面に表示するボタンの出し分け)で行っています。
+このアプリは身内の小規模チームでの利用を想定した簡易的な仕組みで、パスワード認証は
+行っていません。URLを知っていれば誰でもアクセスできるため、URLの共有範囲には
+注意してください。
