@@ -1,16 +1,20 @@
 :root {
-  --bg: #f4f5f7;
+  --bg: #f5f6f8;
   --bg-card: #ffffff;
-  --border: #e2e5ea;
-  --text: #1f2937;
+  --border: #e5e7eb;
+  --text: #22252c;
   --text-muted: #6b7280;
-  --primary: #2563eb;
-  --primary-dark: #1d4ed8;
-  --danger: #dc2626;
-  --todo: #9ca3af;
-  --doing: #2563eb;
-  --done: #16a34a;
-  --radius: 8px;
+  --primary: #3b5bc4;
+  --primary-dark: #2f49a0;
+  --primary-light: #eef1f9;
+  --danger: #b3413a;
+  --todo: #9aa1ac;
+  --doing: #3b5bc4;
+  --done: #3f8b53;
+  --radius: 10px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 1px 2px rgba(20, 22, 30, 0.05);
+  --shadow-md: 0 3px 10px rgba(20, 22, 30, 0.07);
 }
 
 * {
@@ -19,16 +23,22 @@
 
 body {
   margin: 0;
-  font-family: 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Inter', 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Segoe UI', system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
-  line-height: 1.5;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--primary-light);
+  color: var(--primary-dark);
 }
 
 #app {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 16px;
+  padding: 20px 20px 48px;
 }
 
 .app-header {
@@ -37,26 +47,35 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
 }
 
 .app-header h1 {
-  font-size: 1.4rem;
+  font-size: 1.25rem;
   margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  color: var(--text);
 }
 
 .header-user {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+}
+
+.header-user-name {
+  font-weight: 600;
 }
 
 .tabs {
   display: flex;
   gap: 4px;
-  border-bottom: 2px solid var(--border);
-  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
   overflow-x: auto;
 }
 
@@ -64,12 +83,14 @@ body {
   border: none;
   background: none;
   padding: 10px 16px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 500;
   cursor: pointer;
   color: var(--text-muted);
   border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
+  margin-bottom: -1px;
   white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
 .tab-btn:hover {
@@ -79,7 +100,7 @@ body {
 .tab-btn.active {
   color: var(--primary);
   border-bottom-color: var(--primary);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .panel {
@@ -92,12 +113,14 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px;
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
 }
 
 .card h3 {
   margin-top: 0;
-  font-size: 1rem;
+  font-size: 0.98rem;
+  font-weight: 700;
 }
 
 .empty {
@@ -115,16 +138,18 @@ body {
 .stat-card {
   text-align: center;
   cursor: pointer;
-  transition: box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .stat-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-value {
-  font-size: 1.8rem;
+  font-size: 1.7rem;
   font-weight: 700;
+  color: var(--text);
 }
 
 .stat-label {
@@ -155,7 +180,7 @@ body {
   gap: 8px;
   font-size: 0.88rem;
   border-bottom: 1px solid var(--border);
-  padding-bottom: 6px;
+  padding-bottom: 7px;
   flex-wrap: wrap;
 }
 
@@ -167,40 +192,48 @@ body {
 .task-mini-meta {
   color: var(--text-muted);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* buttons */
 .btn {
   border: 1px solid var(--border);
   background: var(--bg-card);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 7px 14px;
-  font-size: 0.88rem;
+  font-size: 0.87rem;
+  font-weight: 500;
   cursor: pointer;
   color: var(--text);
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .btn:hover {
-  background: #f0f1f3;
+  background: #f4f5f7;
+  border-color: #d7dae0;
 }
 
 .btn-primary {
   background: var(--primary);
   border-color: var(--primary);
   color: #fff;
+  font-weight: 600;
 }
 
 .btn-primary:hover {
   background: var(--primary-dark);
+  border-color: var(--primary-dark);
 }
 
 .btn-danger {
   color: var(--danger);
-  border-color: #f3caca;
+  border-color: #e6cfcc;
 }
 
 .btn-danger:hover {
-  background: #fdecec;
+  background: #faf1f0;
 }
 
 .btn-small {
@@ -229,12 +262,20 @@ input[type='date'],
 input[type='number'],
 textarea {
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 0.88rem;
+  border-radius: var(--radius-sm);
+  padding: 7px 11px;
+  font-size: 0.87rem;
   font-family: inherit;
   color: var(--text);
   background: var(--bg-card);
+  transition: border-color 0.15s ease;
+}
+
+select:focus,
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary);
 }
 
 /* tables */
@@ -250,7 +291,7 @@ textarea {
 
 .data-table th,
 .data-table td {
-  padding: 8px 10px;
+  padding: 9px 11px;
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: middle;
@@ -260,6 +301,11 @@ textarea {
   color: var(--text-muted);
   font-weight: 600;
   white-space: nowrap;
+  font-size: 0.82rem;
+}
+
+.data-table tbody tr:hover {
+  background: #fafafb;
 }
 
 .nowrap {
@@ -279,14 +325,15 @@ textarea {
 .you-tag {
   color: var(--primary);
   font-size: 0.8rem;
+  font-weight: 600;
 }
 
 /* badges */
 .badge {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 2px 9px;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: #fff;
 }
@@ -306,8 +353,8 @@ textarea {
 /* progress bar */
 .progress-bar {
   width: 100px;
-  height: 8px;
-  background: #e5e7eb;
+  height: 7px;
+  background: #e9eaee;
   border-radius: 999px;
   overflow: hidden;
 }
@@ -315,13 +362,14 @@ textarea {
 .progress-fill {
   height: 100%;
   background: var(--primary);
+  transition: width 0.2s ease;
 }
 
 /* modal */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(20, 22, 30, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -332,27 +380,30 @@ textarea {
 .modal {
   background: var(--bg-card);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 22px;
   width: 100%;
   max-width: 440px;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: var(--shadow-md);
 }
 
 .modal h3 {
   margin-top: 0;
+  font-weight: 700;
 }
 
 .form-group {
-  margin-bottom: 12px;
+  margin-bottom: 13px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .form-group label {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
+  font-weight: 500;
 }
 
 .form-row {
@@ -373,7 +424,7 @@ textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 16px;
+  margin-top: 17px;
 }
 
 .form-error {
@@ -409,11 +460,11 @@ textarea {
 }
 
 .today-dot {
-  background: #dc2626;
+  background: var(--danger);
 }
 
 .milestone-dot {
-  background: #7c3aed;
+  background: #6b5b95;
 }
 
 .milestone-admin {
@@ -489,11 +540,11 @@ textarea {
 }
 
 .gantt-category-row {
-  background: #f8f9fb;
+  background: #f9fafb;
 }
 
 .gantt-category-row .gantt-label-cell {
-  background: #f8f9fb;
+  background: #f9fafb;
   font-weight: 700;
 }
 
@@ -507,6 +558,7 @@ textarea {
 .gantt-task-assignee {
   color: var(--text-muted);
   font-size: 0.78rem;
+  margin-top: 2px;
 }
 
 .gantt-header-row {
@@ -531,7 +583,7 @@ textarea {
 }
 
 .gantt-day-cell.weekend {
-  color: #c02626;
+  color: #b3413a;
 }
 
 .gantt-day-cell.month-start {
@@ -563,11 +615,11 @@ textarea {
 }
 
 .gantt-bar.status-doing {
-  background: #bfdbfe;
+  background: #d7ddf3;
 }
 
 .gantt-bar.status-done {
-  background: #bbf7d0;
+  background: #d5ead9;
 }
 
 .gantt-bar.status-todo {
@@ -607,11 +659,11 @@ textarea {
 }
 
 .gantt-today-line {
-  background: #dc2626;
+  background: var(--danger);
 }
 
 .gantt-milestone-line {
-  background: #7c3aed;
+  background: #6b5b95;
 }
 
 .gantt-milestone-label {
@@ -619,9 +671,9 @@ textarea {
   top: 2px;
   left: 4px;
   font-size: 0.68rem;
-  color: #7c3aed;
+  color: #6b5b95;
   white-space: nowrap;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.88);
   padding: 0 3px;
   border-radius: 3px;
 }
@@ -652,7 +704,7 @@ textarea {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px 14px;
+  padding: 13px 15px;
 }
 
 .memo-meta {
@@ -708,6 +760,6 @@ textarea {
     grid-template-columns: 1fr;
   }
   .app-header h1 {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
   }
 }

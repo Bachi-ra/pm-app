@@ -1,7 +1,7 @@
 {
   "name": "pm-app",
   "version": "1.0.0",
-  "description": "卒業制作 進行管理Webサイト(Firestore + GitHub Pages)",
+  "description": "卒業制作 チームページ(Firestore + GitHub Pages)",
   "private": true,
   "scripts": {
     "migrate": "node scripts/migrate-mongo-to-firestore.js"
