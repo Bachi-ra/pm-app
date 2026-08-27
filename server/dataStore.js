@@ -1,4 +1,13 @@
+const dns = require('dns');
 const { MongoClient } = require('mongodb');
+
+// RenderなどのホスティングではDNS解決がIPv6を優先し、Atlas側とのTLSハンドシェイクが
+// "tlsv1 alert internal error" で失敗することがある。IPv4を優先させて回避する。
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch (_) {
+  // Node のバージョンによっては存在しないため無視して問題ない
+}
 
 let client;
 let dbPromise;
@@ -13,7 +22,7 @@ function connect() {
     );
   }
 
-  client = new MongoClient(uri);
+  client = new MongoClient(uri, { family: 4 });
   dbPromise = client
     .connect()
     .then(() => client.db(process.env.MONGODB_DB || 'pmapp'))
