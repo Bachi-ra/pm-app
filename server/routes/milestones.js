@@ -2,14 +2,15 @@ const express = require('express');
 const crypto = require('crypto');
 const { readAll, writeAll } = require('../dataStore');
 const { resolveActingMember } = require('../auth');
+const asyncHandler = require('../asyncHandler');
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   res.json(await readAll('milestones'));
-});
+}));
 
-router.post('/', async (req, res) => {
+router.post('/', asyncHandler(async (req, res) => {
   const actingMember = await resolveActingMember(req);
   if (!actingMember || !actingMember.isAdmin) {
     return res.status(403).json({ error: '管理者のみマイルストーンを追加できます' });
@@ -25,9 +26,9 @@ router.post('/', async (req, res) => {
   milestones.push(milestone);
   await writeAll('milestones', milestones);
   res.status(201).json(milestone);
-});
+}));
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', asyncHandler(async (req, res) => {
   const actingMember = await resolveActingMember(req);
   if (!actingMember || !actingMember.isAdmin) {
     return res.status(403).json({ error: '管理者のみマイルストーンを編集できます' });
@@ -43,9 +44,9 @@ router.put('/:id', async (req, res) => {
 
   await writeAll('milestones', milestones);
   res.json(target);
-});
+}));
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', asyncHandler(async (req, res) => {
   const actingMember = await resolveActingMember(req);
   if (!actingMember || !actingMember.isAdmin) {
     return res.status(403).json({ error: '管理者のみマイルストーンを削除できます' });
@@ -58,6 +59,6 @@ router.delete('/:id', async (req, res) => {
   }
   await writeAll('milestones', next);
   res.status(204).end();
-});
+}));
 
 module.exports = router;

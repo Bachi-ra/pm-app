@@ -8,11 +8,20 @@ function connect() {
 
   const uri = process.env.MONGODB_URI;
   if (!uri) {
-    throw new Error('MONGODB_URI が設定されていません(.env またはホスティング先の環境変数を確認してください)');
+    return Promise.reject(
+      new Error('MONGODB_URI が設定されていません(.env またはホスティング先の環境変数を確認してください)')
+    );
   }
 
   client = new MongoClient(uri);
-  dbPromise = client.connect().then(() => client.db(process.env.MONGODB_DB || 'pmapp'));
+  dbPromise = client
+    .connect()
+    .then(() => client.db(process.env.MONGODB_DB || 'pmapp'))
+    .catch((err) => {
+      // 接続失敗を永久にキャッシュしない。次回呼び出しで再接続を試みられるようにする
+      dbPromise = null;
+      throw err;
+    });
   return dbPromise;
 }
 

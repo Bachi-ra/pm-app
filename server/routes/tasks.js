@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { readAll, writeAll } = require('../dataStore');
 const { resolveActingMember } = require('../auth');
+const asyncHandler = require('../asyncHandler');
 
 const router = express.Router();
 
@@ -13,11 +14,11 @@ function clampProgress(value, fallback) {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
 
-router.get('/', async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   res.json(await readAll('tasks'));
-});
+}));
 
-router.post('/', async (req, res) => {
+router.post('/', asyncHandler(async (req, res) => {
   const actingMember = await resolveActingMember(req);
   if (!actingMember || !actingMember.isAdmin) {
     return res.status(403).json({ error: '管理者のみタスクを作成できます' });
@@ -52,9 +53,9 @@ router.post('/', async (req, res) => {
   tasks.push(task);
   await writeAll('tasks', tasks);
   res.status(201).json(task);
-});
+}));
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', asyncHandler(async (req, res) => {
   const actingMember = await resolveActingMember(req);
   const tasks = await readAll('tasks');
   const target = tasks.find((t) => t.id === req.params.id);
@@ -105,9 +106,9 @@ router.put('/:id', async (req, res) => {
 
   await writeAll('tasks', tasks);
   res.json(target);
-});
+}));
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', asyncHandler(async (req, res) => {
   const actingMember = await resolveActingMember(req);
   if (!actingMember || !actingMember.isAdmin) {
     return res.status(403).json({ error: '管理者のみタスクを削除できます' });
@@ -120,6 +121,6 @@ router.delete('/:id', async (req, res) => {
   }
   await writeAll('tasks', next);
   res.status(204).end();
-});
+}));
 
 module.exports = router;

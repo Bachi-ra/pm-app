@@ -17,6 +17,13 @@ app.use('/api/tasks', tasksRouter);
 app.use('/api/milestones', milestonesRouter);
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+// asyncHandlerで包んだルート内のエラー(DB接続失敗など)はここに集約される。
+// これが無いとExpress 4はasyncハンドラの例外を拾えずプロセスごとクラッシュする。
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: 'サーバーエラーが発生しました。しばらくしてから再度お試しください。' });
+});
+
 function getLanUrls() {
   const urls = [];
   const interfaces = os.networkInterfaces();

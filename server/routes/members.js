@@ -2,14 +2,15 @@ const express = require('express');
 const crypto = require('crypto');
 const { readAll, writeAll } = require('../dataStore');
 const { resolveActingMember } = require('../auth');
+const asyncHandler = require('../asyncHandler');
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', asyncHandler(async (req, res) => {
   res.json(await readAll('members'));
-});
+}));
 
-router.post('/', async (req, res) => {
+router.post('/', asyncHandler(async (req, res) => {
   const { name, role } = req.body;
   if (!name || !name.trim()) {
     return res.status(400).json({ error: '名前は必須です' });
@@ -33,9 +34,9 @@ router.post('/', async (req, res) => {
   members.push(newMember);
   await writeAll('members', members);
   res.status(201).json(newMember);
-});
+}));
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', asyncHandler(async (req, res) => {
   const actingMember = await resolveActingMember(req);
   if (!actingMember || !actingMember.isAdmin) {
     return res.status(403).json({ error: '管理者のみメンバーを編集できます' });
@@ -60,9 +61,9 @@ router.put('/:id', async (req, res) => {
 
   await writeAll('members', members);
   res.json(target);
-});
+}));
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', asyncHandler(async (req, res) => {
   const actingMember = await resolveActingMember(req);
   if (!actingMember || !actingMember.isAdmin) {
     return res.status(403).json({ error: '管理者のみメンバーを削除できます' });
@@ -93,6 +94,6 @@ router.delete('/:id', async (req, res) => {
   if (tasksChanged) await writeAll('tasks', tasks);
 
   res.status(204).end();
-});
+}));
 
 module.exports = router;
