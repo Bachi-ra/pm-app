@@ -763,3 +763,22 @@ textarea:focus {
     font-size: 1.1rem;
   }
 }
+
+@media (max-width: 480px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filters {
+    flex-direction: column;
+  }
+  .filters select {
+    width: 100%;
+  }
+  .modal {
+    padding: 18px;
+  }
+}
