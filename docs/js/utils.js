@@ -57,9 +57,19 @@ export function getRoleOptions(members) {
   return [EVERYONE_ROLE, ...roles];
 }
 
+const FIXED_ROLE_COLORS = {
+  モデラー: '#dc2626',
+  アニメーター: '#2563eb',
+  エフェクト: '#ca8a04',
+  コンポジット: '#16a34a',
+  なんでも: '#6b7280',
+  プロジェクトマネージャー: '#8b5cf6',
+};
+
 export function roleColor(role) {
   const str = (role || '').trim();
   if (!str) return '#9ca3af';
+  if (FIXED_ROLE_COLORS[str]) return FIXED_ROLE_COLORS[str];
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
