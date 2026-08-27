@@ -10,3 +10,5 @@ services:
         sync: false
       - key: MONGODB_DB
         value: pmapp
+      - key: NODE_OPTIONS
+        value: --tls-max-v1.2
