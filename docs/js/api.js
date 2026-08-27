@@ -193,6 +193,82 @@ async function deleteMilestone(id) {
   return removeDoc('milestones', id);
 }
 
+// ---- memos ----
+
+async function getMemos() {
+  return getAll('memos');
+}
+
+async function createMemo(data) {
+  const content = (data.content || '').trim();
+  if (!content) throw new Error('内容は必須です');
+  if (!data.authorId) throw new Error('投稿者が特定できません');
+
+  const payload = {
+    authorId: data.authorId,
+    content,
+    createdAt: new Date().toISOString(),
+  };
+  return createDoc('memos', payload);
+}
+
+async function updateMemo(id, data) {
+  const payload = {};
+  if (data.content !== undefined) {
+    const content = String(data.content).trim();
+    if (!content) throw new Error('内容は必須です');
+    payload.content = content;
+  }
+  return updateDocFields('memos', id, payload);
+}
+
+async function deleteMemo(id) {
+  return removeDoc('memos', id);
+}
+
+// ---- links ----
+
+async function getLinks() {
+  return getAll('links');
+}
+
+async function createLink(data) {
+  const title = (data.title || '').trim();
+  const url = (data.url || '').trim();
+  if (!title || !url) throw new Error('名前とURLは必須です');
+  if (!/^https?:\/\//i.test(url)) throw new Error('URLはhttp(s)://から始めてください');
+
+  const payload = {
+    title,
+    url,
+    category: (data.category || 'その他').trim() || 'その他',
+    note: (data.note || '').trim(),
+  };
+  return createDoc('links', payload);
+}
+
+async function updateLink(id, data) {
+  const payload = {};
+  if (data.title !== undefined) {
+    const title = String(data.title).trim();
+    if (!title) throw new Error('名前は必須です');
+    payload.title = title;
+  }
+  if (data.url !== undefined) {
+    const url = String(data.url).trim();
+    if (!url) throw new Error('URLは必須です');
+    if (!/^https?:\/\//i.test(url)) throw new Error('URLはhttp(s)://から始めてください');
+    payload.url = url;
+  }
+  if (data.category !== undefined) payload.category = String(data.category).trim() || 'その他';
+  if (data.note !== undefined) payload.note = String(data.note).trim();
+  return updateDocFields('links', id, payload);
+}
+
+async function deleteLink(id) {
+  return removeDoc('links', id);
+}
+
 export const api = {
   getMembers,
   createMember,
@@ -206,4 +282,12 @@ export const api = {
   createMilestone,
   updateMilestone,
   deleteMilestone,
+  getMemos,
+  createMemo,
+  updateMemo,
+  deleteMemo,
+  getLinks,
+  createLink,
+  updateLink,
+  deleteLink,
 };

@@ -5,12 +5,12 @@ import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/1
 // Firebaseコンソール(プロジェクトの設定 → マイアプリ)で発行される設定値に置き換えてください。
 // apiKeyなどは公開されても問題ない値です(実際のアクセス制御はFirestoreのセキュリティルールで行います)。
 const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT_ID.appspot.com',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId: 'YOUR_APP_ID',
+  apiKey: 'AIzaSyANZhOItAcSFEzS6nQmKHU9MnDvLWI3N2g',
+  authDomain: 'pm-app-73a12.firebaseapp.com',
+  projectId: 'pm-app-73a12',
+  storageBucket: 'pm-app-73a12.firebasestorage.app',
+  messagingSenderId: '954580475571',
+  appId: '1:954580475571:web:18ffcaf5ee7104679b5ac6',
 };
 
 const app = initializeApp(firebaseConfig);

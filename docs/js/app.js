@@ -4,6 +4,8 @@ import { renderDashboard } from './dashboard.js';
 import { renderTasks } from './tasks.js';
 import { renderGantt } from './gantt.js';
 import { renderMembers } from './members.js';
+import { renderMemos } from './memos.js';
+import { renderLinks } from './links.js';
 import { escapeHtml } from './utils.js';
 
 const TABS = {
@@ -11,9 +13,11 @@ const TABS = {
   tasks: { label: 'タスク一覧', render: renderTasks },
   gantt: { label: 'スケジュール', render: renderGantt },
   members: { label: 'メンバー', render: renderMembers },
+  memos: { label: 'メモ', render: renderMemos },
+  links: { label: 'リンク集', render: renderLinks },
 };
 
-let data = { members: [], tasks: [], milestones: [] };
+let data = { members: [], tasks: [], milestones: [], memos: [], links: [] };
 let activeTab = 'dashboard';
 
 const panel = document.getElementById('panel');
@@ -27,12 +31,14 @@ function getCurrentMember() {
 }
 
 async function loadData() {
-  const [members, tasks, milestones] = await Promise.all([
+  const [members, tasks, milestones, memos, links] = await Promise.all([
     api.getMembers(),
     api.getTasks(),
     api.getMilestones(),
+    api.getMemos(),
+    api.getLinks(),
   ]);
-  data = { members, tasks, milestones };
+  data = { members, tasks, milestones, memos, links };
 }
 
 function buildCtx() {

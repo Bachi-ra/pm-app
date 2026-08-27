@@ -22,6 +22,15 @@ export function formatDate(isoDate) {
   return `${y}/${Number(m)}/${Number(d)}`;
 }
 
+export function formatDateTime(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return '';
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`;
+}
+
 export function todayIso() {
   const now = new Date();
   const tz = now.getTimezoneOffset() * 60000;

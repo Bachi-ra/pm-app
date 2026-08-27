@@ -626,6 +626,76 @@ textarea {
   border-radius: 3px;
 }
 
+/* memos */
+.memo-form textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.memo-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.memo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.memo-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.memo-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.memo-author {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.memo-content {
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+
+.memo-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.memo-edit-form textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+/* links */
+.link-external {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link-external:hover {
+  text-decoration: underline;
+}
+
 /* responsive */
 @media (max-width: 800px) {
   .dashboard-grid {
