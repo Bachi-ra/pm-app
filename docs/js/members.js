@@ -1,4 +1,4 @@
-import { escapeHtml } from './utils.js';
+import { escapeHtml, roleColor } from './utils.js';
 
 export function renderMembers(container, ctx) {
   const { members, isAdmin, currentMember } = ctx;
@@ -16,7 +16,7 @@ export function renderMembers(container, ctx) {
             .map(
               (m) => `<tr>
                 <td>${escapeHtml(m.name)}${m.id === currentMember?.id ? ' <span class="you-tag">(あなた)</span>' : ''}</td>
-                <td>${escapeHtml(m.role || '-')}</td>
+                <td>${m.role ? `<span class="badge" style="background:${roleColor(m.role)}">${escapeHtml(m.role)}</span>` : '-'}</td>
                 <td>${m.isAdmin ? '<span class="badge status-doing">管理者</span>' : 'メンバー'}</td>
                 <td class="nowrap">
                   ${

@@ -1,4 +1,4 @@
-import { escapeHtml, formatDate, todayIso, addDays, daysBetween, STATUS_CLASS } from './utils.js';
+import { escapeHtml, formatDate, todayIso, addDays, daysBetween, roleColor, STATUS_CLASS } from './utils.js';
 
 const DAY_WIDTH = 28;
 const LABEL_WIDTH = 220;
@@ -85,7 +85,11 @@ function buildGanttChart(tasks, milestones) {
 
       const label = `<div class="gantt-label-cell">
         <div class="gantt-task-title" title="${escapeHtml(task.title)}">${escapeHtml(task.title)}</div>
-        <div class="gantt-task-assignee">${escapeHtml(task.assigneeRole || '未割当')}</div>
+        <div class="gantt-task-assignee">${
+          task.assigneeRole
+            ? `<span class="badge" style="background:${roleColor(task.assigneeRole)}">${escapeHtml(task.assigneeRole)}</span>`
+            : '未割当'
+        }</div>
       </div>`;
 
       const bar = `<div class="gantt-row-track" style="width:${trackWidth}px;background-image:${weekendBg}">

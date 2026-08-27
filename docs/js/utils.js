@@ -57,6 +57,18 @@ export function getRoleOptions(members) {
   return [EVERYONE_ROLE, ...roles];
 }
 
+export function roleColor(role) {
+  const str = (role || '').trim();
+  if (!str) return '#9ca3af';
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    hash |= 0;
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 65%, 40%)`;
+}
+
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
   for (const [key, value] of Object.entries(attrs)) {

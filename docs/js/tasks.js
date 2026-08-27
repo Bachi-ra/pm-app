@@ -1,4 +1,8 @@
-import { escapeHtml, formatDate, getRoleOptions, EVERYONE_ROLE, STATUS_LIST, STATUS_CLASS } from './utils.js';
+import { escapeHtml, formatDate, getRoleOptions, roleColor, EVERYONE_ROLE, STATUS_LIST, STATUS_CLASS } from './utils.js';
+
+function roleBadge(role) {
+  return role ? `<span class="badge" style="background:${roleColor(role)}">${escapeHtml(role)}</span>` : '未割当';
+}
 
 const filterState = { assigneeRole: 'all', category: 'all', status: 'all' };
 
@@ -134,7 +138,7 @@ function renderRow(task, currentMember, isAdmin) {
       ${task.description ? `<div class="task-desc">${escapeHtml(task.description)}</div>` : ''}
     </td>
     <td>${escapeHtml(task.category)}</td>
-    <td>${escapeHtml(task.assigneeRole || '未割当')}</td>
+    <td>${roleBadge(task.assigneeRole)}</td>
     <td><span class="badge ${STATUS_CLASS[task.status]}">${task.status}</span></td>
     <td><div class="progress-bar" title="${task.progress}%"><div class="progress-fill" style="width:${task.progress}%"></div></div></td>
     <td class="nowrap">${formatDate(task.startDate)} 〜 ${formatDate(task.endDate)}</td>

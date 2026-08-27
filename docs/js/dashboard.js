@@ -1,8 +1,12 @@
-import { escapeHtml, formatDate, todayIso, addDays, EVERYONE_ROLE } from './utils.js';
+import { escapeHtml, formatDate, todayIso, addDays, roleColor, EVERYONE_ROLE } from './utils.js';
 
 function isAssignedToMember(task, member) {
   const role = (member.role || '').trim();
   return Boolean(task.assigneeRole && (task.assigneeRole === EVERYONE_ROLE || (role && task.assigneeRole === role)));
+}
+
+function roleBadge(role) {
+  return role ? `<span class="badge" style="background:${roleColor(role)}">${escapeHtml(role)}</span>` : '未割当';
 }
 
 export function renderDashboard(container, ctx) {
@@ -90,7 +94,7 @@ export function renderDashboard(container, ctx) {
                   .map(
                     (w) => `<tr>
                       <td>${escapeHtml(w.member.name)}</td>
-                      <td>${escapeHtml(w.member.role || '-')}</td>
+                      <td>${w.member.role ? `<span class="badge" style="background:${roleColor(w.member.role)}">${escapeHtml(w.member.role)}</span>` : '-'}</td>
                       <td>${w.count}</td>
                       <td>${w.done}</td>
                       <td>${renderMiniProgress(w.avg)}</td>
@@ -114,7 +118,7 @@ function renderTaskMiniList(list, overdue) {
       .map(
         (t) => `<li class="${overdue ? 'overdue' : ''}">
           <span class="task-mini-title">${escapeHtml(t.title)}</span>
-          <span class="task-mini-meta">${escapeHtml(t.assigneeRole || '未割当')} / 期限 ${formatDate(t.endDate)}</span>
+          <span class="task-mini-meta">${roleBadge(t.assigneeRole)} / 期限 ${formatDate(t.endDate)}</span>
         </li>`
       )
       .join('')}
