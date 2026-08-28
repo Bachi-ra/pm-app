@@ -14,6 +14,7 @@ const APP_SHELL = [
   './js/links.js',
   './js/utils.js',
   './js/firebaseClient.js',
+  './js/export.js',
 ];
 
 self.addEventListener('install', (event) => {

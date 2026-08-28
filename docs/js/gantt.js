@@ -1,4 +1,5 @@
 import { escapeHtml, formatDate, todayIso, addDays, daysBetween, roleColor, STATUS_CLASS } from './utils.js';
+import { exportGanttToExcel } from './export.js';
 
 const DAY_WIDTH = 28;
 const LABEL_WIDTH = 220;
@@ -11,16 +12,34 @@ export function renderGantt(container, ctx) {
   const { tasks, milestones, isAdmin } = ctx;
 
   container.innerHTML = `
-    <div class="gantt-legend">
-      <span><i class="dot status-todo"></i>未着手</span>
-      <span><i class="dot status-doing"></i>進行中</span>
-      <span><i class="dot status-done"></i>完了</span>
-      <span><i class="dot today-dot"></i>本日</span>
-      <span><i class="dot milestone-dot"></i>マイルストーン</span>
+    <div class="toolbar">
+      <div class="gantt-legend">
+        <span><i class="dot status-todo"></i>未着手</span>
+        <span><i class="dot status-doing"></i>進行中</span>
+        <span><i class="dot status-done"></i>完了</span>
+        <span><i class="dot today-dot"></i>本日</span>
+        <span><i class="dot milestone-dot"></i>マイルストーン</span>
+      </div>
+      <button class="btn" id="export-excel-btn">Excel出力</button>
     </div>
     ${isAdmin ? renderMilestoneAdmin(milestones) : ''}
     <div id="gantt-chart-area"></div>
   `;
+
+  container.querySelector('#export-excel-btn').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const originalLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '出力中...';
+    try {
+      await exportGanttToExcel(tasks, milestones);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+  });
 
   if (isAdmin) wireMilestoneAdmin(container, ctx);
 
