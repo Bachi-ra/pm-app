@@ -87,7 +87,7 @@ export function renderDashboard(container, ctx) {
       ${
         workload.length === 0
           ? '<p class="empty">メンバーが登録されていません</p>'
-          : `<table class="data-table">
+          : `<div class="table-scroll"><table class="data-table">
               <thead><tr><th>メンバー</th><th>役職</th><th>担当タスク数</th><th>完了数</th><th>平均進捗</th></tr></thead>
               <tbody>
                 ${workload
@@ -102,7 +102,7 @@ export function renderDashboard(container, ctx) {
                   )
                   .join('')}
               </tbody>
-            </table>`
+            </table></div>`
       }
     </div>
   `;

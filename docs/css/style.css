@@ -336,6 +336,11 @@ textarea:focus {
   font-size: 0.76rem;
   font-weight: 600;
   color: #fff;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
 }
 
 .status-todo {
