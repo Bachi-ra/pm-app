@@ -31,3 +31,8 @@ export function ensureSignedIn() {
   }
   return readyPromise;
 }
+
+export async function currentUid() {
+  await ensureSignedIn();
+  return auth.currentUser.uid;
+}

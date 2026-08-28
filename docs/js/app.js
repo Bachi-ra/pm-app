@@ -1,5 +1,4 @@
 import { api } from './api.js';
-import { getCurrentMemberId, setCurrentMemberId } from './state.js';
 import { renderDashboard } from './dashboard.js';
 import { renderTasks } from './tasks.js';
 import { renderGantt } from './gantt.js';
@@ -18,6 +17,7 @@ const TABS = {
 };
 
 let data = { members: [], tasks: [], milestones: [], memos: [], links: [] };
+let currentMemberId = null;
 let activeTab = 'dashboard';
 
 const panel = document.getElementById('panel');
@@ -26,8 +26,7 @@ const headerUser = document.getElementById('header-user');
 const modalLayer = document.getElementById('modal-layer');
 
 function getCurrentMember() {
-  const id = getCurrentMemberId();
-  return data.members.find((m) => m.id === id) || null;
+  return data.members.find((m) => m.id === currentMemberId) || null;
 }
 
 async function loadData() {
@@ -63,12 +62,7 @@ function renderHeader() {
     <span class="header-user-name">${escapeHtml(currentMember.name)}${
     currentMember.isAdmin ? ' <span class="badge status-doing">管理者</span>' : ''
   }</span>
-    <button class="btn btn-small" id="switch-user-btn">ユーザー切替</button>
   `;
-  document.getElementById('switch-user-btn').addEventListener('click', () => {
-    setCurrentMemberId(null);
-    boot();
-  });
 }
 
 function renderActiveTab() {
@@ -103,8 +97,7 @@ function buildTabsNav() {
   });
 }
 
-function showIdentityModal() {
-  const needsBootstrap = data.members.length === 0;
+function showIdentityModal(needsBootstrap) {
   modalLayer.innerHTML = needsBootstrap ? bootstrapFormHtml() : selectMemberFormHtml();
   wireIdentityModal(needsBootstrap);
 }
@@ -146,6 +139,7 @@ function selectMemberFormHtml() {
     <div class="overlay">
       <div class="modal">
         <h3>あなたの名前を選択してください</h3>
+        <p class="modal-hint">一度選ぶと、このブラウザ・端末ではその人として記録されます。</p>
         <form id="identity-form">
           <div class="form-group">
             <select name="memberId" required>
@@ -166,36 +160,76 @@ function selectMemberFormHtml() {
 
 function wireIdentityModal(needsBootstrap) {
   const form = document.getElementById('identity-form');
+  const submitBtn = form.querySelector('button[type="submit"]');
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    submitBtn.disabled = true;
     const fd = new FormData(form);
     try {
       if (needsBootstrap) {
-        const member = await api.createMember({ name: fd.get('name'), role: fd.get('role') });
-        setCurrentMemberId(member.id);
+        await api.createMember({ name: fd.get('name'), role: fd.get('role') });
       } else {
         const id = fd.get('memberId');
-        if (!id) return;
-        setCurrentMemberId(id);
+        if (!id) {
+          submitBtn.disabled = false;
+          return;
+        }
+        await api.claimMember(id);
       }
-      modalLayer.innerHTML = '';
       await boot();
     } catch (err) {
-      document.getElementById('identity-form-error').textContent = err.message;
+      // フォームはこの時点で既に別の画面に置き換わっている可能性があるため、
+      // 要素が残っていれば表示し、無ければalertに逃がす(無言で固まるのを防ぐ)。
+      const errorEl = document.getElementById('identity-form-error');
+      if (errorEl) {
+        errorEl.textContent = err.message;
+      } else {
+        alert(err.message);
+      }
+      submitBtn.disabled = false;
     }
   });
 }
 
+function showLoading() {
+  tabsNav.innerHTML = '';
+  headerUser.innerHTML = '';
+  panel.innerHTML = '<p class="empty">読み込み中...</p>';
+}
+
 async function boot() {
-  await loadData();
-  const currentMember = getCurrentMember();
-  if (!currentMember) {
+  showLoading();
+
+  let claim;
+  try {
+    claim = await api.getMyClaim();
+    await loadData();
+  } catch (err) {
+    panel.innerHTML = `<p class="empty">読み込みに失敗しました: ${escapeHtml(err.message)}</p>`;
+    return;
+  }
+
+  currentMemberId = null;
+  if (claim) {
+    const member = data.members.find((m) => m.id === claim.memberId);
+    if (member) {
+      currentMemberId = member.id;
+    } else {
+      // 紐付け先のメンバーが削除されている(退会扱い)ので、選び直せるようにする
+      await api.clearMyClaim().catch(() => {});
+    }
+  }
+
+  if (!currentMemberId) {
     tabsNav.innerHTML = '';
     headerUser.innerHTML = '';
     panel.innerHTML = '';
-    showIdentityModal();
+    showIdentityModal(data.members.length === 0);
     return;
   }
+
+  modalLayer.innerHTML = '';
   buildTabsNav();
   renderHeader();
   renderActiveTab();

@@ -1,13 +1,130 @@
 rules_version = '2';
 
 // Firebaseコンソール →「Firestore Database」→「ルール」タブに、この内容を貼り付けて
-// 「公開」してください。匿名サインイン済み(アプリを経由してアクセスしてきた)クライアントに
-// 読み書きを許可します。誰が管理者か/誰の担当タスクかといった業務ロジックはアプリの
-// クライアント側(docs/js/*.js)で判定しています。
+// 「公開」してください。
+//
+// 匿名認証(request.auth != null)だけでは「誰でも」を意味してしまい、
+// 管理者権限の判定や本人確認ができません。そこで、匿名セッション(uid)を
+// members ドキュメントに一度だけ紐付ける memberClaims コレクションを使って
+// 「このセッションは誰か」をFirestore側で検証できるようにしています。
+//
+// 注意: EVERYONE_ROLE の値 '全員' は docs/js/utils.js の EVERYONE_ROLE 定数と
+// 一致させてください(変更する場合は両方直してください)。
+//
+// デプロイ後の一度きりの移行について:
+// このルールを初めて公開した直後は、まだ誰も memberClaims / meta/appInfo を
+// 持っていないため、既存メンバーは一度「あなたの名前を選択」してログインし直す
+// 必要があります(アプリが自動でmeta/appInfoを補完します)。この移行が完了する
+// までの短い間、他の訪問者が管理者になりすませる隙が理論上あるため、
+// ルール公開後はできるだけ早く、既存の管理者がログインし直してください。
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasClaim() {
+      return exists(/databases/$(database)/documents/memberClaims/$(request.auth.uid));
+    }
+
+    function claimedMemberId() {
+      return get(/databases/$(database)/documents/memberClaims/$(request.auth.uid)).data.memberId;
+    }
+
+    function myMember() {
+      return get(/databases/$(database)/documents/members/$(claimedMemberId())).data;
+    }
+
+    function isAdmin() {
+      return signedIn() && hasClaim() && myMember().isAdmin == true;
+    }
+
+    // 最初の管理者登録(または、このルール公開後の一度きりの移行)が完了したかどうかの印。
+    match /meta/appInfo {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasAll(['bootstrapped', 'adminCount'])
+        && request.resource.data.bootstrapped == true;
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /members/{memberId} {
+      allow read: if signedIn();
+
+      // 通常は管理者のみ新規メンバーを作成できる。
+      // 例外として、meta/appInfo がまだ存在しない(=誰も管理者として
+      // 確定していない)間だけ、isAdmin:true での作成を許可する。
+      allow create: if signedIn() && (
+        isAdmin() ||
+        (request.resource.data.isAdmin == true && !exists(/databases/$(database)/documents/meta/appInfo))
+      );
+
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 匿名セッション(uid)と members ドキュメントの、一度きりの紐付け。
+    // 「未紐付けの既存メンバーを自分だと申告する」行為であり、パスワードなしで
+    // 名前を選ぶ今までの挙動と信頼モデルは同じだが、一度紐付けたら他人に
+    // 成りすませなくなる分、安全になる。
+    match /memberClaims/{uid} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['memberId'])
+        && exists(/databases/$(database)/documents/members/$(request.resource.data.memberId));
+
+      // 紐付け先のメンバーが削除された場合の本人による再登録、
+      // または管理者による強制リセットのみ許可する。
+      allow delete: if signedIn() && (
+        isAdmin() ||
+        (uid == request.auth.uid && !exists(/databases/$(database)/documents/members/$(resource.data.memberId)))
+      );
+      allow update: if false;
+    }
+
+    match /tasks/{taskId} {
+      allow read: if signedIn();
+      allow create: if isAdmin();
+      allow delete: if isAdmin();
+
+      // 担当役職が自分の役職(または「全員」)と一致するメンバーは、
+      // 状態(status)と進捗(progress)のみ更新できる。それ以外は管理者のみ。
+      allow update: if isAdmin() || (
+        signedIn() && hasClaim() &&
+        (resource.data.assigneeRole == myMember().role || resource.data.assigneeRole == '全員') &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'progress'])
+      );
+    }
+
+    match /milestones/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /memos/{id} {
+      allow read: if signedIn();
+
+      allow create: if signedIn() && hasClaim()
+        && request.resource.data.authorId == claimedMemberId();
+
+      // 投稿者本人は本文のみ編集可能。
+      allow update: if signedIn() && hasClaim()
+        && resource.data.authorId == claimedMemberId()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content']);
+
+      // 投稿者本人、または管理者が削除可能。
+      allow delete: if signedIn() && hasClaim()
+        && (resource.data.authorId == claimedMemberId() || isAdmin());
+    }
+
+    match /links/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
     }
   }
 }

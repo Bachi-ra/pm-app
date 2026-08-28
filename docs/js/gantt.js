@@ -3,6 +3,10 @@ import { escapeHtml, formatDate, todayIso, addDays, daysBetween, roleColor, STAT
 const DAY_WIDTH = 28;
 const LABEL_WIDTH = 220;
 
+function isValidIsoDate(value) {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
 export function renderGantt(container, ctx) {
   const { tasks, milestones, isAdmin } = ctx;
 
@@ -34,7 +38,7 @@ function buildGanttChart(tasks, milestones) {
     ...tasks.flatMap((t) => [t.startDate, t.endDate]),
     ...milestones.map((m) => m.date),
     todayIso(),
-  ];
+  ].filter(isValidIsoDate);
   const minDate = allDates.reduce((a, b) => (a < b ? a : b));
   const maxDate = allDates.reduce((a, b) => (a > b ? a : b));
   const rangeStart = addDays(minDate, -3);
@@ -74,7 +78,7 @@ function buildGanttChart(tasks, milestones) {
     );
 
     const catTasks = tasks
-      .filter((t) => t.category === category)
+      .filter((t) => t.category === category && isValidIsoDate(t.startDate) && isValidIsoDate(t.endDate))
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
 
     for (const task of catTasks) {
@@ -122,7 +126,7 @@ function buildGanttChart(tasks, milestones) {
   overlay.appendChild(el(`<div class="gantt-today-line" style="left:${todayOffset}px"></div>`));
 
   for (const ms of milestones) {
-    if (ms.date < rangeStart || ms.date > rangeEnd) continue;
+    if (!isValidIsoDate(ms.date) || ms.date < rangeStart || ms.date > rangeEnd) continue;
     const offset = LABEL_WIDTH + daysBetween(rangeStart, ms.date) * DAY_WIDTH + DAY_WIDTH / 2;
     overlay.appendChild(
       el(`<div class="gantt-milestone-line" style="left:${offset}px" title="${escapeHtml(ms.title)} (${formatDate(ms.date)})">

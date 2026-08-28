@@ -1,4 +1,4 @@
-import { db, ensureSignedIn } from './firebaseClient.js';
+import { db, ensureSignedIn, currentUid } from './firebaseClient.js';
 import { STATUS_LIST } from './utils.js';
 import {
   collection,
@@ -8,6 +8,8 @@ import {
   updateDoc,
   deleteDoc,
   getDoc,
+  setDoc,
+  runTransaction,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 function toObj(docSnap) {
@@ -46,6 +48,46 @@ function clampProgress(value, fallback) {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
 
+// ---- identity (どの匿名セッションがどのメンバーか) ----
+
+async function getMyClaim() {
+  await ensureSignedIn();
+  const uid = await currentUid();
+  const snap = await getDoc(doc(db, 'memberClaims', uid));
+  return snap.exists() ? snap.data() : null;
+}
+
+async function claimMember(memberId) {
+  await ensureSignedIn();
+  const uid = await currentUid();
+  const metaSnap = await getDoc(doc(db, 'meta', 'appInfo'));
+
+  if (metaSnap.exists()) {
+    await setDoc(doc(db, 'memberClaims', uid), { memberId });
+    return;
+  }
+
+  // meta/appInfo がまだ無い = このFirestoreルールを公開した直後、まだ誰も
+  // ログインし直していない状態。既存メンバーの管理者数を数えて、
+  // 一度きりの移行としてmeta/appInfoを補完しつつ自分の紐付けも作成する。
+  const members = await getAll('members');
+  const adminCount = Math.max(members.filter((m) => m.isAdmin).length, 1);
+  await runTransaction(db, async (tx) => {
+    const metaRef = doc(db, 'meta', 'appInfo');
+    const check = await tx.get(metaRef);
+    if (!check.exists()) {
+      tx.set(metaRef, { bootstrapped: true, adminCount });
+    }
+    tx.set(doc(db, 'memberClaims', uid), { memberId });
+  });
+}
+
+async function clearMyClaim() {
+  await ensureSignedIn();
+  const uid = await currentUid();
+  await deleteDoc(doc(db, 'memberClaims', uid));
+}
+
 // ---- members ----
 
 async function getMembers() {
@@ -55,6 +97,7 @@ async function getMembers() {
 async function createMember(data) {
   const name = (data.name || '').trim();
   if (!name) throw new Error('名前は必須です');
+  await ensureSignedIn();
 
   const members = await getAll('members');
   const isBootstrap = members.length === 0;
@@ -64,39 +107,85 @@ async function createMember(data) {
     role: (data.role || '').trim(),
     isAdmin: isBootstrap ? true : Boolean(data.isAdmin),
   };
-  return createDoc('members', payload);
+
+  if (!isBootstrap) {
+    return createDoc('members', payload);
+  }
+
+  // 最初の管理者登録は、members / memberClaims / meta/appInfo をまとめて
+  // 1つのトランザクションで作成し、複数人が同時に開いても矛盾が起きないようにする。
+  const uid = await currentUid();
+  const memberRef = doc(collection(db, 'members'));
+  await runTransaction(db, async (tx) => {
+    tx.set(doc(db, 'meta', 'appInfo'), { bootstrapped: true, adminCount: 1 });
+    tx.set(memberRef, payload);
+    tx.set(doc(db, 'memberClaims', uid), { memberId: memberRef.id });
+  });
+  return { id: memberRef.id, ...payload };
 }
 
 async function updateMember(id, data) {
-  const members = await getAll('members');
-  const target = members.find((m) => m.id === id);
-  if (!target) throw new Error('メンバーが見つかりません');
+  await ensureSignedIn();
+  const ref = doc(db, 'members', id);
+  const metaRef = doc(db, 'meta', 'appInfo');
 
-  const wasAdmin = target.isAdmin;
-  const willBeAdmin = data.isAdmin !== undefined ? Boolean(data.isAdmin) : wasAdmin;
-  const remainingAdmins = members.filter((m) => m.id !== id && m.isAdmin).length;
-  if (wasAdmin && !willBeAdmin && remainingAdmins === 0) {
-    throw new Error('最後の管理者の権限は外せません');
-  }
+  const result = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error('メンバーが見つかりません');
+    const target = snap.data();
 
-  const payload = { isAdmin: willBeAdmin };
-  if (data.name !== undefined) payload.name = String(data.name).trim();
-  if (data.role !== undefined) payload.role = String(data.role).trim();
+    const metaSnap = await tx.get(metaRef);
+    const meta = metaSnap.exists() ? metaSnap.data() : { adminCount: target.isAdmin ? 1 : 0 };
 
-  return updateDocFields('members', id, payload);
+    const wasAdmin = Boolean(target.isAdmin);
+    const willBeAdmin = data.isAdmin !== undefined ? Boolean(data.isAdmin) : wasAdmin;
+
+    let nextAdminCount = meta.adminCount;
+    if (wasAdmin && !willBeAdmin) nextAdminCount -= 1;
+    if (!wasAdmin && willBeAdmin) nextAdminCount += 1;
+
+    if (wasAdmin && !willBeAdmin && nextAdminCount < 1) {
+      throw new Error('最後の管理者の権限は外せません');
+    }
+
+    const payload = { isAdmin: willBeAdmin };
+    if (data.name !== undefined) payload.name = String(data.name).trim();
+    if (data.role !== undefined) payload.role = String(data.role).trim();
+
+    tx.update(ref, payload);
+    if (nextAdminCount !== meta.adminCount || !metaSnap.exists()) {
+      tx.set(metaRef, { ...meta, adminCount: nextAdminCount }, { merge: true });
+    }
+
+    return { id, ...target, ...payload };
+  });
+
+  return result;
 }
 
 async function deleteMember(id) {
-  const members = await getAll('members');
-  const target = members.find((m) => m.id === id);
-  if (!target) throw new Error('メンバーが見つかりません');
+  await ensureSignedIn();
+  const ref = doc(db, 'members', id);
+  const metaRef = doc(db, 'meta', 'appInfo');
 
-  const remainingAdmins = members.filter((m) => m.id !== id && m.isAdmin).length;
-  if (target.isAdmin && remainingAdmins === 0) {
-    throw new Error('最後の管理者は削除できません');
-  }
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error('メンバーが見つかりません');
+    const target = snap.data();
 
-  await removeDoc('members', id);
+    const metaSnap = await tx.get(metaRef);
+    const meta = metaSnap.exists() ? metaSnap.data() : { adminCount: target.isAdmin ? 1 : 0 };
+
+    if (target.isAdmin && meta.adminCount <= 1) {
+      throw new Error('最後の管理者は削除できません');
+    }
+
+    tx.delete(ref);
+    if (target.isAdmin) {
+      tx.set(metaRef, { ...meta, adminCount: meta.adminCount - 1 }, { merge: true });
+    }
+  });
+
   return null;
 }
 
@@ -265,6 +354,9 @@ async function deleteLink(id) {
 }
 
 export const api = {
+  getMyClaim,
+  claimMember,
+  clearMyClaim,
   getMembers,
   createMember,
   updateMember,

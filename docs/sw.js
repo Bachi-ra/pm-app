@@ -13,7 +13,6 @@ const APP_SHELL = [
   './js/memos.js',
   './js/links.js',
   './js/utils.js',
-  './js/state.js',
   './js/firebaseClient.js',
 ];
 
