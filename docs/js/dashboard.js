@@ -10,6 +10,104 @@ import {
   priorityRank,
   EVERYONE_ROLE,
 } from './utils.js';
+import { buildGanttChart, buildCalendarHtml, shiftMonth } from './gantt.js';
+import { exportGanttToExcel, exportScheduleToIcs } from './export.js';
+
+let scheduleViewMode = 'gantt';
+let scheduleCalendarMonth = todayIso().slice(0, 7);
+
+function scheduleWidgetShellHtml() {
+  return `
+    <div class="toolbar">
+      <div class="gantt-legend">
+        <span><i class="dot status-todo"></i>未着手</span>
+        <span><i class="dot status-doing"></i>進行中</span>
+        <span><i class="dot status-done"></i>完了</span>
+        <span><i class="dot today-dot"></i>本日</span>
+        <span><i class="dot milestone-dot"></i>マイルストーン</span>
+      </div>
+      <div>
+        <button class="btn btn-small${scheduleViewMode === 'gantt' ? ' btn-primary' : ''}" id="dash-view-gantt-btn">ガント</button>
+        <button class="btn btn-small${scheduleViewMode === 'calendar' ? ' btn-primary' : ''}" id="dash-view-calendar-btn">カレンダー</button>
+        <button class="btn" id="dash-export-excel-btn">Excel出力</button>
+        <button class="btn" id="dash-export-ics-btn">カレンダー出力(.ics)</button>
+      </div>
+    </div>
+    <div id="dash-schedule-area"></div>
+  `;
+}
+
+function renderScheduleWidget(container, ctx) {
+  const { tasks, milestones } = ctx;
+  const area = container.querySelector('#dash-schedule-area');
+  if (!area) return;
+  area.innerHTML = '';
+
+  if (scheduleViewMode === 'calendar') {
+    area.innerHTML = buildCalendarHtml(tasks, milestones, scheduleCalendarMonth);
+    const prevBtn = area.querySelector('#calendar-prev');
+    const nextBtn = area.querySelector('#calendar-next');
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        scheduleCalendarMonth = shiftMonth(scheduleCalendarMonth, -1);
+        renderScheduleWidget(container, ctx);
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        scheduleCalendarMonth = shiftMonth(scheduleCalendarMonth, 1);
+        renderScheduleWidget(container, ctx);
+      });
+    }
+    return;
+  }
+
+  if (tasks.length === 0 && milestones.length === 0) {
+    area.innerHTML = '<p class="empty">タスクまたはマイルストーンを登録するとガントチャートが表示されます</p>';
+    return;
+  }
+  area.appendChild(buildGanttChart(tasks, milestones));
+}
+
+function wireScheduleWidget(container, ctx) {
+  const ganttBtn = container.querySelector('#dash-view-gantt-btn');
+  const calBtn = container.querySelector('#dash-view-calendar-btn');
+  ganttBtn.addEventListener('click', () => {
+    scheduleViewMode = 'gantt';
+    ganttBtn.classList.add('btn-primary');
+    calBtn.classList.remove('btn-primary');
+    renderScheduleWidget(container, ctx);
+  });
+  calBtn.addEventListener('click', () => {
+    scheduleViewMode = 'calendar';
+    calBtn.classList.add('btn-primary');
+    ganttBtn.classList.remove('btn-primary');
+    renderScheduleWidget(container, ctx);
+  });
+
+  container.querySelector('#dash-export-excel-btn').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const originalLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '出力中...';
+    try {
+      await exportGanttToExcel(ctx.tasks, ctx.milestones);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+  });
+
+  container.querySelector('#dash-export-ics-btn').addEventListener('click', () => {
+    try {
+      exportScheduleToIcs(ctx.tasks, ctx.milestones);
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
 
 const ACTIVITY_LABELS = {
   task_status_changed: 'ステータス変更',
@@ -243,6 +341,11 @@ export function renderDashboard(container, ctx) {
     </div>
 
     <div class="card">
+      <h3>スケジュール</h3>
+      ${scheduleWidgetShellHtml()}
+    </div>
+
+    <div class="card">
       <h3>残タスク数の推移</h3>
       <div id="burndown-area"><p class="empty">読み込み中...</p></div>
     </div>
@@ -313,6 +416,8 @@ export function renderDashboard(container, ctx) {
     });
   }
 
+  wireScheduleWidget(container, ctx);
+  renderScheduleWidget(container, ctx);
   loadAndRenderBurndown(container, ctx);
   loadAndRenderActivity(container, ctx);
 }

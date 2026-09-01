@@ -183,12 +183,25 @@ function goToTab(tab) {
 
 async function refresh() {
   await loadData();
+  buildTabsNav();
   renderHeader();
   renderActiveTab();
 }
 
+function visibleTabEntries() {
+  const currentMember = getCurrentMember();
+  const isAdmin = Boolean(currentMember && currentMember.isAdmin);
+  // スケジュールタブ(編集用)は管理者専用。他のメンバーはダッシュボードの
+  // ガントチャート/カレンダーで閲覧する
+  return Object.entries(TABS).filter(([key]) => key !== 'gantt' || isAdmin);
+}
+
 function buildTabsNav() {
-  tabsNav.innerHTML = Object.entries(TABS)
+  const tabs = visibleTabEntries();
+  if (!tabs.some(([key]) => key === activeTab)) {
+    activeTab = 'dashboard';
+  }
+  tabsNav.innerHTML = tabs
     .map(
       ([key, t]) =>
         `<button class="tab-btn ${key === activeTab ? 'active' : ''}" data-tab="${key}">${t.label}</button>`
