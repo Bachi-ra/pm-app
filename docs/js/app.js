@@ -75,10 +75,89 @@ function renderHeader() {
     return;
   }
   headerUser.innerHTML = `
+    <div class="header-search">
+      <input type="text" id="global-search-input" placeholder="検索(タスク/メモ/リンク)" />
+      <div id="global-search-results" class="search-results" hidden></div>
+    </div>
     <span class="header-user-name">${escapeHtml(currentMember.name)}${
     currentMember.isAdmin ? ' <span class="badge status-doing">管理者</span>' : ''
   }</span>
   `;
+  setupSearchBox();
+}
+
+function buildSearchResults(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const results = [];
+
+  for (const t of data.tasks) {
+    if (t.title.toLowerCase().includes(q) || (t.category || '').toLowerCase().includes(q)) {
+      results.push({ type: 'タスク', label: t.title, tab: 'tasks' });
+    }
+  }
+  for (const m of data.memos) {
+    if ((m.content || '').toLowerCase().includes(q)) {
+      results.push({ type: 'メモ', label: m.content.slice(0, 40), tab: 'memos' });
+    }
+  }
+  for (const l of data.links) {
+    if ((l.title || '').toLowerCase().includes(q)) {
+      results.push({ type: 'リンク', label: l.title, tab: 'links' });
+    }
+  }
+  return results.slice(0, 20);
+}
+
+function renderSearchResults(results) {
+  const box = document.getElementById('global-search-results');
+  if (!box) return;
+  box.innerHTML =
+    results.length === 0
+      ? '<p class="empty">一致する結果がありません</p>'
+      : results
+          .map(
+            (r) =>
+              `<button type="button" class="search-result-item" data-tab="${r.tab}"><span class="badge" style="background:#6b7280">${r.type}</span> ${escapeHtml(r.label)}</button>`
+          )
+          .join('');
+  box.hidden = false;
+  box.querySelectorAll('[data-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      goToTab(btn.dataset.tab);
+      box.hidden = true;
+      const input = document.getElementById('global-search-input');
+      if (input) input.value = '';
+    });
+  });
+}
+
+let searchOutsideClickWired = false;
+
+function setupSearchBox() {
+  const input = document.getElementById('global-search-input');
+  const box = document.getElementById('global-search-results');
+  if (!input || !box) return;
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim();
+    if (!q) {
+      box.hidden = true;
+      box.innerHTML = '';
+      return;
+    }
+    renderSearchResults(buildSearchResults(q));
+  });
+
+  if (!searchOutsideClickWired) {
+    searchOutsideClickWired = true;
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.header-search')) {
+        const resultsBox = document.getElementById('global-search-results');
+        if (resultsBox) resultsBox.hidden = true;
+      }
+    });
+  }
 }
 
 function renderActiveTab() {
