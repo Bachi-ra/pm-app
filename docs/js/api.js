@@ -10,6 +10,8 @@ import {
   getDoc,
   setDoc,
   runTransaction,
+  query,
+  where,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 function toObj(docSnap) {
@@ -279,6 +281,43 @@ async function deleteTask(id) {
   return removeDoc('tasks', id);
 }
 
+// ---- task comments ----
+
+async function getTaskComments(taskId) {
+  await ensureSignedIn();
+  const q = query(collection(db, 'taskComments'), where('taskId', '==', taskId));
+  const snap = await getDocs(q);
+  return snap.docs.map(toObj);
+}
+
+async function createTaskComment(taskId, data) {
+  const text = (data.text || '').trim();
+  if (!text) throw new Error('コメントを入力してください');
+  if (!data.authorMemberId) throw new Error('投稿者が特定できません');
+
+  const payload = {
+    taskId,
+    authorMemberId: data.authorMemberId,
+    text,
+    createdAt: new Date().toISOString(),
+  };
+  return createDoc('taskComments', payload);
+}
+
+async function updateTaskComment(id, data) {
+  const payload = {};
+  if (data.text !== undefined) {
+    const text = String(data.text).trim();
+    if (!text) throw new Error('コメントを入力してください');
+    payload.text = text;
+  }
+  return updateDocFields('taskComments', id, payload);
+}
+
+async function deleteTaskComment(id) {
+  return removeDoc('taskComments', id);
+}
+
 // ---- milestones ----
 
 async function getMilestones() {
@@ -390,6 +429,10 @@ export const api = {
   createTask,
   updateTask,
   deleteTask,
+  getTaskComments,
+  createTaskComment,
+  updateTaskComment,
+  deleteTaskComment,
   getMilestones,
   createMilestone,
   updateMilestone,

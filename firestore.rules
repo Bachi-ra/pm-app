@@ -101,6 +101,22 @@ service cloud.firestore {
       );
     }
 
+    match /taskComments/{id} {
+      allow read: if signedIn();
+
+      allow create: if signedIn() && hasClaim()
+        && request.resource.data.authorMemberId == claimedMemberId();
+
+      // 投稿者本人は本文のみ編集可能。
+      allow update: if signedIn() && hasClaim()
+        && resource.data.authorMemberId == claimedMemberId()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text']);
+
+      // 投稿者本人、または管理者が削除可能。
+      allow delete: if signedIn() && hasClaim()
+        && (resource.data.authorMemberId == claimedMemberId() || isAdmin());
+    }
+
     match /milestones/{id} {
       allow read: if signedIn();
       allow write: if isAdmin();

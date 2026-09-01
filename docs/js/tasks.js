@@ -1,6 +1,7 @@
 import {
   escapeHtml,
   formatDate,
+  formatDateTime,
   getRoleOptions,
   roleColor,
   priorityColor,
@@ -128,6 +129,13 @@ export function renderTasks(container, ctx) {
       }
     });
   });
+
+  container.querySelectorAll('[data-comments-id]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const task = tasks.find((t) => t.id === btn.dataset.commentsId);
+      openCommentsModal(container, ctx, task);
+    });
+  });
 }
 
 function renderRow(task, allTasks, currentMember, isAdmin) {
@@ -137,14 +145,14 @@ function renderRow(task, allTasks, currentMember, isAdmin) {
   );
   const canQuickEdit = isOwner && !isAdmin;
 
-  let actionCell;
+  let primaryActions;
   if (isAdmin) {
-    actionCell = `
+    primaryActions = `
       <button class="btn btn-small" data-edit-id="${task.id}">編集</button>
       <button class="btn btn-small btn-danger" data-delete-id="${task.id}">削除</button>
     `;
   } else if (canQuickEdit) {
-    actionCell = `
+    primaryActions = `
       <select class="quick-status">
         ${STATUS_LIST.map((s) => `<option value="${s}" ${task.status === s ? 'selected' : ''}>${s}</option>`).join('')}
       </select>
@@ -152,8 +160,9 @@ function renderRow(task, allTasks, currentMember, isAdmin) {
       <button class="btn btn-small btn-primary" data-quick-save-id="${task.id}">更新</button>
     `;
   } else {
-    actionCell = '';
+    primaryActions = '';
   }
+  const actionCell = `${primaryActions}<button class="btn btn-small" data-comments-id="${task.id}">コメント</button>`;
 
   const checklist = task.checklist || [];
   const checklistDone = checklist.filter((item) => item.done).length;
@@ -401,6 +410,139 @@ function openTaskModal(container, ctx, task) {
       await ctx.refresh();
     } catch (err) {
       root.querySelector('#task-form-error').textContent = err.message;
+    }
+  });
+}
+
+function commentAuthorName(members, id) {
+  const m = members.find((mm) => mm.id === id);
+  return m ? m.name : '退会したメンバー';
+}
+
+function renderCommentItem(comment, members, currentMember, isAdmin) {
+  const isOwner = Boolean(currentMember && comment.authorMemberId === currentMember.id);
+  const canEdit = isOwner;
+  const canDelete = isOwner || isAdmin;
+
+  return `<li class="memo-item" data-comment-id="${comment.id}">
+    <div class="memo-meta">
+      <span class="memo-author">${escapeHtml(commentAuthorName(members, comment.authorMemberId))}</span>
+      <span class="memo-date">${formatDateTime(comment.createdAt)}</span>
+    </div>
+    <div class="memo-content">${escapeHtml(comment.text).replace(/\n/g, '<br>')}</div>
+    ${
+      canEdit || canDelete
+        ? `<div class="memo-actions">
+            ${canEdit ? `<button class="btn btn-small" data-edit-comment="${comment.id}">編集</button>` : ''}
+            ${canDelete ? `<button class="btn btn-small btn-danger" data-delete-comment="${comment.id}">削除</button>` : ''}
+          </div>`
+        : ''
+    }
+  </li>`;
+}
+
+function startEditComment(root, ctx, comment, reload) {
+  const li = root.querySelector(`[data-comment-id="${comment.id}"]`);
+  li.innerHTML = `
+    <form class="memo-edit-form">
+      <textarea name="text" rows="2" required>${escapeHtml(comment.text)}</textarea>
+      <div class="memo-form-actions">
+        <button type="button" class="btn" id="comment-cancel-edit">キャンセル</button>
+        <button type="submit" class="btn btn-primary">保存</button>
+      </div>
+      <p class="form-error" id="comment-edit-error"></p>
+    </form>
+  `;
+
+  li.querySelector('#comment-cancel-edit').addEventListener('click', reload);
+
+  li.querySelector('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = new FormData(e.target);
+    try {
+      await ctx.api.updateTaskComment(comment.id, { text: form.get('text') });
+      await reload();
+    } catch (err) {
+      li.querySelector('#comment-edit-error').textContent = err.message;
+    }
+  });
+}
+
+function wireCommentActions(root, ctx, comments, reload) {
+  root.querySelectorAll('[data-delete-comment]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('このコメントを削除しますか?')) return;
+      try {
+        await ctx.api.deleteTaskComment(btn.dataset.deleteComment);
+        await reload();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+
+  root.querySelectorAll('[data-edit-comment]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const comment = comments.find((c) => c.id === btn.dataset.editComment);
+      startEditComment(root, ctx, comment, reload);
+    });
+  });
+}
+
+function openCommentsModal(container, ctx, task) {
+  const root = container.querySelector('#task-modal-root');
+  const { members, currentMember, isAdmin } = ctx;
+
+  root.innerHTML = `
+    <div class="overlay">
+      <div class="modal">
+        <h3>コメント: ${escapeHtml(task.title)}</h3>
+        <div id="comments-body"><p class="empty">読み込み中...</p></div>
+        <form id="comment-form" class="memo-form">
+          <textarea name="text" rows="2" placeholder="コメントを入力..." required></textarea>
+          <div class="memo-form-actions">
+            <button type="submit" class="btn btn-primary">投稿</button>
+          </div>
+          <p class="form-error" id="comment-form-error"></p>
+        </form>
+        <div class="modal-actions">
+          <span></span>
+          <div><button type="button" class="btn" id="modal-cancel">閉じる</button></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  root.querySelector('#modal-cancel').addEventListener('click', () => {
+    root.innerHTML = '';
+  });
+
+  async function loadAndRenderComments() {
+    const body = root.querySelector('#comments-body');
+    try {
+      const comments = await ctx.api.getTaskComments(task.id);
+      const sorted = comments.slice().sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+      body.innerHTML =
+        sorted.length === 0
+          ? '<p class="empty">まだコメントがありません</p>'
+          : `<ul class="memo-list">${sorted.map((c) => renderCommentItem(c, members, currentMember, isAdmin)).join('')}</ul>`;
+      wireCommentActions(root, ctx, sorted, loadAndRenderComments);
+    } catch (err) {
+      body.innerHTML = `<p class="empty">読み込みに失敗しました: ${escapeHtml(err.message)}</p>`;
+    }
+  }
+
+  loadAndRenderComments();
+
+  root.querySelector('#comment-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = new FormData(e.target);
+    try {
+      await ctx.api.createTaskComment(task.id, { authorMemberId: currentMember.id, text: form.get('text') });
+      e.target.reset();
+      await loadAndRenderComments();
+    } catch (err) {
+      root.querySelector('#comment-form-error').textContent = err.message;
     }
   });
 }
