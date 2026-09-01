@@ -8,7 +8,10 @@ import { renderLinks } from './links.js';
 import { renderAssets } from './assets.js';
 import { renderReferences } from './references.js';
 import { renderRenderQueue } from './renderQueue.js';
+import { initThemeToggle } from './theme.js';
 import { escapeHtml } from './utils.js';
+
+initThemeToggle();
 
 const isReadonlyMode = new URLSearchParams(window.location.search).get('readonly') === '1';
 
