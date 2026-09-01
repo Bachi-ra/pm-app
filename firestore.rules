@@ -185,6 +185,13 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // バーンダウンチャート用の日次スナップショット。日付がドキュメントIDなので
+    // 過去の日付は上書きされない(その日を最後に開いたクライアントの値になる)。
+    match /progressSnapshots/{date} {
+      allow read: if signedIn();
+      allow write: if signedIn() && hasClaim();
+    }
+
     match /references/{id} {
       allow read: if signedIn();
 

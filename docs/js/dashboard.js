@@ -1,4 +1,14 @@
-import { escapeHtml, formatDate, todayIso, addDays, roleColor, priorityColor, priorityRank, EVERYONE_ROLE } from './utils.js';
+import {
+  escapeHtml,
+  formatDate,
+  todayIso,
+  addDays,
+  daysBetween,
+  roleColor,
+  priorityColor,
+  priorityRank,
+  EVERYONE_ROLE,
+} from './utils.js';
 
 function isAssignedToMember(task, member) {
   const role = (member.role || '').trim();
@@ -56,6 +66,74 @@ async function maybeSendDiscordNotification(ctx, urgentTasks, today) {
     });
   } catch (err) {
     // 通知に失敗しても画面表示には影響させない
+  }
+}
+
+function buildBurndownSvg(snapshots, milestones) {
+  if (snapshots.length < 2) {
+    return '<p class="empty">データが2日分たまるとグラフが表示されます(今日から記録を開始しています)</p>';
+  }
+
+  const width = 640;
+  const height = 200;
+  const padding = { top: 16, right: 16, bottom: 20, left: 28 };
+  const plotW = width - padding.left - padding.right;
+  const plotH = height - padding.top - padding.bottom;
+
+  const minDate = snapshots[0].date;
+  const maxDate = snapshots[snapshots.length - 1].date;
+  const totalDays = Math.max(daysBetween(minDate, maxDate), 1);
+  const maxRemaining = Math.max(...snapshots.map((s) => s.remainingCount), 1);
+
+  const xFor = (date) => padding.left + (daysBetween(minDate, date) / totalDays) * plotW;
+  const yFor = (count) => padding.top + plotH - (count / maxRemaining) * plotH;
+
+  const points = snapshots.map((s) => `${xFor(s.date).toFixed(1)},${yFor(s.remainingCount).toFixed(1)}`).join(' ');
+  const dots = snapshots
+    .map(
+      (s) =>
+        `<circle cx="${xFor(s.date).toFixed(1)}" cy="${yFor(s.remainingCount).toFixed(1)}" r="2.5" fill="#3b5bc4"><title>${escapeHtml(formatDate(s.date))}: 残り${s.remainingCount}件</title></circle>`
+    )
+    .join('');
+
+  const milestoneLines = milestones
+    .filter((ms) => ms.date >= minDate && ms.date <= maxDate)
+    .map((ms) => {
+      const x = xFor(ms.date).toFixed(1);
+      return `<line x1="${x}" y1="${padding.top}" x2="${x}" y2="${padding.top + plotH}" stroke="#7c3aed" stroke-dasharray="4 3" stroke-width="1" />
+        <text x="${Number(x) + 3}" y="${padding.top + 10}" font-size="9" fill="#7c3aed">${escapeHtml(ms.title)}</text>`;
+    })
+    .join('');
+
+  return `
+    <svg viewBox="0 0 ${width} ${height}" class="burndown-svg" role="img" aria-label="残タスク数の推移">
+      <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${padding.top + plotH}" stroke="#e5e7eb" stroke-width="1" />
+      <line x1="${padding.left}" y1="${padding.top + plotH}" x2="${padding.left + plotW}" y2="${padding.top + plotH}" stroke="#e5e7eb" stroke-width="1" />
+      ${milestoneLines}
+      <polyline points="${points}" fill="none" stroke="#3b5bc4" stroke-width="2" />
+      ${dots}
+      <text x="2" y="${padding.top + 4}" font-size="9" fill="#6b7280">${maxRemaining}</text>
+      <text x="2" y="${padding.top + plotH}" font-size="9" fill="#6b7280">0</text>
+    </svg>
+  `;
+}
+
+async function loadAndRenderBurndown(container, ctx) {
+  const area = container.querySelector('#burndown-area');
+  if (!area) return;
+  try {
+    const { tasks, milestones } = ctx;
+    const today = todayIso();
+    const remainingCount = tasks.filter((t) => t.status !== '完了').length;
+    const totalCount = tasks.length;
+    const avgProgress = totalCount ? Math.round(tasks.reduce((sum, t) => sum + t.progress, 0) / totalCount) : 0;
+
+    await ctx.api.upsertProgressSnapshot({ date: today, remainingCount, totalCount, avgProgress });
+    const snapshots = await ctx.api.getProgressSnapshots();
+    const sorted = snapshots.slice().sort((a, b) => a.date.localeCompare(b.date));
+    area.innerHTML = buildBurndownSvg(sorted, milestones);
+  } catch (err) {
+    area.innerHTML = `<p class="empty">グラフの読み込みに失敗しました: ${escapeHtml(err.message)}</p>`;
   }
 }
 
@@ -124,6 +202,11 @@ export function renderDashboard(container, ctx) {
       </div>
     </div>
 
+    <div class="card">
+      <h3>残タスク数の推移</h3>
+      <div id="burndown-area"><p class="empty">読み込み中...</p></div>
+    </div>
+
     <div class="dashboard-cols">
       <div class="card">
         <h3>直近7日以内の締切 ${overdueTasks.length ? `<span class="badge status-todo">期限超過 ${overdueTasks.length}件あり</span>` : ''}</h3>
@@ -184,6 +267,8 @@ export function renderDashboard(container, ctx) {
       renderDashboard(container, ctx);
     });
   }
+
+  loadAndRenderBurndown(container, ctx);
 }
 
 function renderTaskMiniList(list, overdue) {

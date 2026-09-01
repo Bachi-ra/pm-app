@@ -132,6 +132,24 @@ async function claimDailyDiscordNotification(today) {
   });
 }
 
+// ---- progress snapshots (バーンダウンチャート) ----
+
+async function getProgressSnapshots() {
+  return getAll('progressSnapshots');
+}
+
+// 日付をドキュメントIDにして、その日にアプリを開いた誰かが最新の集計値で
+// 上書きする(過去の日付のスナップショットは日付が変わるので書き換わらない)。
+async function upsertProgressSnapshot(data) {
+  await ensureSignedIn();
+  await setDoc(doc(db, 'progressSnapshots', data.date), {
+    date: data.date,
+    remainingCount: data.remainingCount,
+    totalCount: data.totalCount,
+    avgProgress: data.avgProgress,
+  });
+}
+
 // ---- members ----
 
 async function getMembers() {
@@ -582,6 +600,8 @@ export const api = {
   getNotificationSettings,
   updateDiscordWebhookUrl,
   claimDailyDiscordNotification,
+  getProgressSnapshots,
+  upsertProgressSnapshot,
   getMembers,
   createMember,
   updateMember,

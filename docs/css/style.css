@@ -759,6 +759,12 @@ textarea:focus {
   text-decoration: underline;
 }
 
+.burndown-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
 /* calendar */
 .calendar-header {
   display: flex;
