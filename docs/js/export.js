@@ -40,6 +40,81 @@ function downloadWorkbook(workbook, filenamePrefix) {
   });
 }
 
+function icsDate(iso) {
+  return iso.replace(/-/g, '');
+}
+
+function icsDateTimeStamp() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}T${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}Z`;
+}
+
+function icsEscape(text) {
+  return String(text ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\n/g, '\\n');
+}
+
+function foldLine(line) {
+  if (line.length <= 70) return line;
+  const parts = [];
+  let rest = line;
+  while (rest.length > 70) {
+    parts.push(rest.slice(0, 70));
+    rest = ` ${rest.slice(70)}`;
+  }
+  parts.push(rest);
+  return parts.join('\r\n');
+}
+
+export function exportScheduleToIcs(tasks, milestones) {
+  const validMilestones = milestones.filter((m) => m.date);
+  const validTasks = tasks.filter((t) => t.endDate);
+  if (validMilestones.length === 0 && validTasks.length === 0) {
+    throw new Error('出力できるタスク・マイルストーンがありません。');
+  }
+
+  const stamp = icsDateTimeStamp();
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//pm-app//schedule//JA', 'CALSCALE:GREGORIAN'];
+
+  for (const ms of validMilestones) {
+    lines.push('BEGIN:VEVENT');
+    lines.push(foldLine(`UID:milestone-${ms.id}@pm-app`));
+    lines.push(`DTSTAMP:${stamp}`);
+    lines.push(`DTSTART;VALUE=DATE:${icsDate(ms.date)}`);
+    lines.push(`DTEND;VALUE=DATE:${icsDate(isoAddDays(ms.date, 1))}`);
+    lines.push(foldLine(`SUMMARY:${icsEscape(ms.title)}`));
+    lines.push('END:VEVENT');
+  }
+
+  for (const t of validTasks) {
+    lines.push('BEGIN:VEVENT');
+    lines.push(foldLine(`UID:task-${t.id}@pm-app`));
+    lines.push(`DTSTAMP:${stamp}`);
+    lines.push(`DTSTART;VALUE=DATE:${icsDate(t.endDate)}`);
+    lines.push(`DTEND;VALUE=DATE:${icsDate(isoAddDays(t.endDate, 1))}`);
+    lines.push(foldLine(`SUMMARY:${icsEscape(`締切: ${t.title}`)}`));
+    if (t.description) lines.push(foldLine(`DESCRIPTION:${icsEscape(t.description)}`));
+    lines.push('END:VEVENT');
+  }
+
+  lines.push('END:VCALENDAR');
+  const content = lines.join('\r\n');
+
+  const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `スケジュール_${todayIsoLocal().replace(/-/g, '')}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function exportGanttToExcel(tasks, milestones) {
   if (!window.ExcelJS) {
     throw new Error('Excel出力ライブラリの読み込みに失敗しました。通信環境を確認して再度お試しください。');

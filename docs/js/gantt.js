@@ -1,5 +1,5 @@
 import { escapeHtml, formatDate, todayIso, addDays, daysBetween, roleColor, STATUS_CLASS } from './utils.js';
-import { exportGanttToExcel } from './export.js';
+import { exportGanttToExcel, exportScheduleToIcs } from './export.js';
 
 const DAY_WIDTH = 28;
 const LABEL_WIDTH = 220;
@@ -28,6 +28,7 @@ export function renderGantt(container, ctx) {
         <button class="btn btn-small${viewMode === 'gantt' ? ' btn-primary' : ''}" id="view-gantt-btn">ガント</button>
         <button class="btn btn-small${viewMode === 'calendar' ? ' btn-primary' : ''}" id="view-calendar-btn">カレンダー</button>
         <button class="btn" id="export-excel-btn">Excel出力</button>
+        <button class="btn" id="export-ics-btn">カレンダー出力(.ics)</button>
       </div>
     </div>
     ${isAdmin ? renderMilestoneAdmin(milestones) : ''}
@@ -55,6 +56,14 @@ export function renderGantt(container, ctx) {
     } finally {
       btn.disabled = false;
       btn.textContent = originalLabel;
+    }
+  });
+
+  container.querySelector('#export-ics-btn').addEventListener('click', () => {
+    try {
+      exportScheduleToIcs(tasks, milestones);
+    } catch (err) {
+      alert(err.message);
     }
   });
 
