@@ -185,6 +185,15 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // 変更履歴(アクティビティログ)。書いたら書き換え不可、削除は管理者のみ
+    // (通常UIからは削除しない。Firebaseコンソールでの手動整理用)。
+    match /activityLog/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && hasClaim();
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+
     // バーンダウンチャート用の日次スナップショット。日付がドキュメントIDなので
     // 過去の日付は上書きされない(その日を最後に開いたクライアントの値になる)。
     match /progressSnapshots/{date} {

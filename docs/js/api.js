@@ -44,6 +44,23 @@ async function removeDoc(colName, id) {
   return null;
 }
 
+async function logActivity(type, targetId, detail) {
+  try {
+    const uid = await currentUid();
+    const claimSnap = await getDoc(doc(db, 'memberClaims', uid));
+    const memberId = claimSnap.exists() ? claimSnap.data().memberId : null;
+    await createDoc('activityLog', {
+      type,
+      targetId,
+      memberId,
+      detail,
+      createdAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    // ログ書き込みの失敗は本処理に影響させない
+  }
+}
+
 function clampProgress(value, fallback) {
   const n = Number(value);
   if (Number.isNaN(n)) return fallback;
@@ -150,6 +167,12 @@ async function upsertProgressSnapshot(data) {
   });
 }
 
+// ---- activity log ----
+
+async function getActivityLog() {
+  return getAll('activityLog');
+}
+
 // ---- members ----
 
 async function getMembers() {
@@ -171,7 +194,9 @@ async function createMember(data) {
   };
 
   if (!isBootstrap) {
-    return createDoc('members', payload);
+    const created = await createDoc('members', payload);
+    await logActivity('member_added', created.id, payload.name);
+    return created;
   }
 
   // 最初の管理者登録は、members / memberClaims / meta/appInfo をまとめて
@@ -183,6 +208,7 @@ async function createMember(data) {
     tx.set(memberRef, payload);
     tx.set(doc(db, 'memberClaims', uid), { memberId: memberRef.id });
   });
+  await logActivity('member_added', memberRef.id, payload.name);
   return { id: memberRef.id, ...payload };
 }
 
@@ -229,11 +255,13 @@ async function deleteMember(id) {
   await ensureSignedIn();
   const ref = doc(db, 'members', id);
   const metaRef = doc(db, 'meta', 'appInfo');
+  let deletedName = '';
 
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists()) throw new Error('メンバーが見つかりません');
     const target = snap.data();
+    deletedName = target.name;
 
     const metaSnap = await tx.get(metaRef);
     const meta = metaSnap.exists() ? metaSnap.data() : { adminCount: target.isAdmin ? 1 : 0 };
@@ -248,6 +276,7 @@ async function deleteMember(id) {
     }
   });
 
+  await logActivity('member_removed', id, deletedName);
   return null;
 }
 
@@ -319,7 +348,15 @@ async function updateTask(id, data) {
   const nextEnd = payload.endDate !== undefined ? payload.endDate : target.endDate;
   if (nextStart > nextEnd) throw new Error('開始日は終了日より前にしてください');
 
-  return updateDocFields('tasks', id, payload);
+  const result = await updateDocFields('tasks', id, payload);
+
+  if (payload.status !== undefined && payload.status !== target.status) {
+    await logActivity('task_status_changed', id, `${target.title}: ${target.status} → ${payload.status}`);
+  } else if (payload.progress !== undefined && payload.progress !== target.progress) {
+    await logActivity('task_progress_changed', id, `${target.title}: ${target.progress}% → ${payload.progress}%`);
+  }
+
+  return result;
 }
 
 async function deleteTask(id) {
@@ -602,6 +639,7 @@ export const api = {
   claimDailyDiscordNotification,
   getProgressSnapshots,
   upsertProgressSnapshot,
+  getActivityLog,
   getMembers,
   createMember,
   updateMember,
