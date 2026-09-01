@@ -144,6 +144,18 @@ body {
   font-weight: 700;
 }
 
+.tab-badge {
+  display: inline-block;
+  min-width: 16px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .panel {
   display: flex;
   flex-direction: column;
@@ -782,6 +794,25 @@ textarea:focus {
   display: flex;
   gap: 6px;
   margin-top: 8px;
+}
+
+.memo-read-receipt {
+  margin-top: 6px;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.memo-read-receipt summary {
+  cursor: pointer;
+}
+
+.memo-read-receipt-body {
+  margin-top: 4px;
+  padding-left: 4px;
+}
+
+.memo-read-receipt-body p {
+  margin: 2px 0;
 }
 
 .memo-edit-form textarea {

@@ -59,6 +59,26 @@ export function renderMemos(container, ctx) {
       }
     });
   });
+
+  markUnreadAsRead(ctx, sorted);
+}
+
+async function markUnreadAsRead(ctx, memos) {
+  const { currentMember, api } = ctx;
+  if (!currentMember) return;
+  const unread = memos.filter((m) => !(m.readBy || []).includes(currentMember.id));
+  if (unread.length === 0) return;
+
+  for (const memo of unread) {
+    try {
+      await api.markMemoRead(memo.id, currentMember.id);
+    } catch (err) {
+      // 既読化の失敗は画面表示に影響させない
+    }
+  }
+
+  // 既読バッジ(タブ横の未読件数、各メモの既読人数)を最新化する。
+  await ctx.refresh();
 }
 
 function authorName(members, id) {
@@ -85,7 +105,22 @@ function renderMemoItem(memo, members, currentMember, isAdmin) {
           </div>`
         : ''
     }
+    ${renderReadReceipt(memo, members)}
   </li>`;
+}
+
+function renderReadReceipt(memo, members) {
+  const readBy = memo.readBy || [];
+  const readNames = members.filter((m) => readBy.includes(m.id)).map((m) => m.name);
+  const unreadNames = members.filter((m) => !readBy.includes(m.id)).map((m) => m.name);
+
+  return `<details class="memo-read-receipt">
+    <summary>既読 ${readNames.length}/${members.length}</summary>
+    <div class="memo-read-receipt-body">
+      <p><strong>既読:</strong> ${readNames.length > 0 ? readNames.map(escapeHtml).join('、') : 'なし'}</p>
+      <p><strong>未読:</strong> ${unreadNames.length > 0 ? unreadNames.map(escapeHtml).join('、') : 'なし'}</p>
+    </div>
+  </details>`;
 }
 
 function startEditMemo(container, ctx, memo) {

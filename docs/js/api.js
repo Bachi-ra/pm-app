@@ -13,6 +13,7 @@ import {
   query,
   where,
   writeBatch,
+  arrayUnion,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 function toObj(docSnap) {
@@ -440,6 +441,7 @@ async function createMemo(data) {
     authorId: data.authorId,
     content,
     createdAt: new Date().toISOString(),
+    readBy: [data.authorId],
   };
   return createDoc('memos', payload);
 }
@@ -456,6 +458,11 @@ async function updateMemo(id, data) {
 
 async function deleteMemo(id) {
   return removeDoc('memos', id);
+}
+
+async function markMemoRead(memoId, memberId) {
+  await ensureSignedIn();
+  await updateDoc(doc(db, 'memos', memoId), { readBy: arrayUnion(memberId) });
 }
 
 // ---- render jobs (共有PC/レンダーキュー) ----
@@ -744,6 +751,7 @@ export const api = {
   createMemo,
   updateMemo,
   deleteMemo,
+  markMemoRead,
   getRenderJobs,
   createRenderJob,
   updateRenderJob,

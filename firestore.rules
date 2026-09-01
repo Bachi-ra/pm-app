@@ -167,10 +167,14 @@ service cloud.firestore {
       allow create: if signedIn() && hasClaim()
         && (request.resource.data.authorId == claimedMemberId() || isAdmin());
 
-      // 投稿者本人は本文のみ編集可能。
-      allow update: if signedIn() && hasClaim()
+      // 投稿者本人は本文のみ編集可能。それとは別に、既読管理のため
+      // signedInなら誰でもreadByフィールドだけは更新できる。
+      allow update: if (signedIn() && hasClaim()
         && resource.data.authorId == claimedMemberId()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content'])) || (
+        signedIn() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy'])
+      );
 
       // 投稿者本人、または管理者が削除可能。
       allow delete: if signedIn() && hasClaim()

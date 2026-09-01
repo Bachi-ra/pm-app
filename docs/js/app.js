@@ -201,15 +201,24 @@ function visibleTabEntries() {
   return Object.entries(TABS).filter(([key]) => key !== 'gantt' || isAdmin);
 }
 
+function unreadMemoCount() {
+  const currentMember = getCurrentMember();
+  if (!currentMember) return 0;
+  return data.memos.filter((m) => !(m.readBy || []).includes(currentMember.id)).length;
+}
+
 function buildTabsNav() {
   const tabs = visibleTabEntries();
   if (!tabs.some(([key]) => key === activeTab)) {
     activeTab = 'dashboard';
   }
+  const unreadMemos = unreadMemoCount();
   tabsNav.innerHTML = tabs
     .map(
       ([key, t]) =>
-        `<button class="tab-btn ${key === activeTab ? 'active' : ''}" data-tab="${key}">${t.label}</button>`
+        `<button class="tab-btn ${key === activeTab ? 'active' : ''}" data-tab="${key}">${t.label}${
+          key === 'memos' && unreadMemos > 0 ? ` <span class="tab-badge">${unreadMemos}</span>` : ''
+        }</button>`
     )
     .join('');
   tabsNav.querySelectorAll('.tab-btn').forEach((btn) => {
