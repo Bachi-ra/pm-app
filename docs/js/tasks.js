@@ -1,10 +1,24 @@
-import { escapeHtml, formatDate, getRoleOptions, roleColor, EVERYONE_ROLE, STATUS_LIST, STATUS_CLASS } from './utils.js';
+import {
+  escapeHtml,
+  formatDate,
+  getRoleOptions,
+  roleColor,
+  priorityColor,
+  EVERYONE_ROLE,
+  STATUS_LIST,
+  STATUS_CLASS,
+  PRIORITY_LIST,
+} from './utils.js';
 
 function roleBadge(role) {
   return role ? `<span class="badge" style="background:${roleColor(role)}">${escapeHtml(role)}</span>` : '未割当';
 }
 
-const filterState = { assigneeRole: 'all', category: 'all', status: 'all' };
+function priorityBadge(priority) {
+  return `<span class="badge" style="background:${priorityColor(priority)}">${escapeHtml(priority)}</span>`;
+}
+
+const filterState = { assigneeRole: 'all', category: 'all', status: 'all', priority: 'all' };
 
 export function renderTasks(container, ctx) {
   const { members, tasks, currentMember, isAdmin } = ctx;
@@ -15,6 +29,7 @@ export function renderTasks(container, ctx) {
     if (filterState.assigneeRole !== 'all' && t.assigneeRole !== filterState.assigneeRole) return false;
     if (filterState.category !== 'all' && t.category !== filterState.category) return false;
     if (filterState.status !== 'all' && t.status !== filterState.status) return false;
+    if (filterState.priority !== 'all' && t.priority !== filterState.priority) return false;
     return true;
   });
 
@@ -33,6 +48,10 @@ export function renderTasks(container, ctx) {
           <option value="all">状態: すべて</option>
           ${STATUS_LIST.map((s) => `<option value="${s}" ${filterState.status === s ? 'selected' : ''}>${s}</option>`).join('')}
         </select>
+        <select id="filter-priority">
+          <option value="all">優先度: すべて</option>
+          ${PRIORITY_LIST.map((p) => `<option value="${p}" ${filterState.priority === p ? 'selected' : ''}>${p}</option>`).join('')}
+        </select>
       </div>
       ${isAdmin ? '<button class="btn btn-primary" id="add-task-btn">+ 新規タスク</button>' : ''}
     </div>
@@ -46,7 +65,7 @@ export function renderTasks(container, ctx) {
         ? '<p class="empty">条件に合うタスクがありません</p>'
         : `<div class="table-scroll"><table class="data-table">
             <thead><tr>
-              <th>タイトル</th><th>カテゴリ</th><th>担当役職</th><th>状態</th><th>進捗</th><th>期間</th><th></th>
+              <th>タイトル</th><th>カテゴリ</th><th>担当役職</th><th>優先度</th><th>状態</th><th>進捗</th><th>期間</th><th></th>
             </tr></thead>
             <tbody>
               ${filtered.map((t) => renderRow(t, currentMember, isAdmin)).join('')}
@@ -67,6 +86,10 @@ export function renderTasks(container, ctx) {
   });
   container.querySelector('#filter-status').addEventListener('change', (e) => {
     filterState.status = e.target.value;
+    renderTasks(container, ctx);
+  });
+  container.querySelector('#filter-priority').addEventListener('change', (e) => {
+    filterState.priority = e.target.value;
     renderTasks(container, ctx);
   });
 
@@ -143,6 +166,7 @@ function renderRow(task, currentMember, isAdmin) {
     </td>
     <td>${escapeHtml(task.category)}</td>
     <td>${roleBadge(task.assigneeRole)}</td>
+    <td>${priorityBadge(task.priority || '中')}</td>
     <td><span class="badge ${STATUS_CLASS[task.status]}">${task.status}</span></td>
     <td><div class="progress-bar" title="${task.progress}%"><div class="progress-fill" style="width:${task.progress}%"></div></div></td>
     <td class="nowrap">${formatDate(task.startDate)} 〜 ${formatDate(task.endDate)}</td>
@@ -263,6 +287,12 @@ function openTaskModal(container, ctx, task) {
             </div>
           </div>
           <div class="form-group">
+            <label>優先度</label>
+            <select name="priority">
+              ${PRIORITY_LIST.map((p) => `<option value="${p}" ${(task?.priority || '中') === p ? 'selected' : ''}>${p}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
             <label>チェックリスト</label>
             <div id="checklist-section">${renderChecklistEditor(checklist)}</div>
           </div>
@@ -317,6 +347,7 @@ function openTaskModal(container, ctx, task) {
       status: form.get('status'),
       progress: Number(form.get('progress')),
       checklist,
+      priority: form.get('priority'),
     };
     try {
       if (isEdit) {

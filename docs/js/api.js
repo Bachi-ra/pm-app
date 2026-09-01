@@ -1,5 +1,5 @@
 import { db, ensureSignedIn, currentUid } from './firebaseClient.js';
-import { STATUS_LIST } from './utils.js';
+import { STATUS_LIST, PRIORITY_LIST } from './utils.js';
 import {
   collection,
   getDocs,
@@ -228,6 +228,7 @@ async function createTask(data) {
     startDate: data.startDate,
     endDate: data.endDate,
     checklist: sanitizeChecklist(data.checklist),
+    priority: PRIORITY_LIST.includes(data.priority) ? data.priority : '中',
   };
   return createDoc('tasks', payload);
 }
@@ -259,6 +260,7 @@ async function updateTask(id, data) {
   if (data.startDate !== undefined) payload.startDate = data.startDate;
   if (data.endDate !== undefined) payload.endDate = data.endDate;
   if (data.checklist !== undefined) payload.checklist = sanitizeChecklist(data.checklist);
+  if (data.priority !== undefined) payload.priority = PRIORITY_LIST.includes(data.priority) ? data.priority : '中';
 
   const nextStart = payload.startDate !== undefined ? payload.startDate : target.startDate;
   const nextEnd = payload.endDate !== undefined ? payload.endDate : target.endDate;

@@ -79,6 +79,20 @@ export function roleColor(role) {
   return `hsl(${hue}, 65%, 40%)`;
 }
 
+export const PRIORITY_LIST = ['高', '中', '低'];
+
+const PRIORITY_COLORS = { 高: '#dc2626', 中: '#ca8a04', 低: '#9ca3af' };
+
+export function priorityColor(priority) {
+  return PRIORITY_COLORS[priority] || PRIORITY_COLORS['中'];
+}
+
+const PRIORITY_ORDER = { 高: 0, 中: 1, 低: 2 };
+
+export function priorityRank(priority) {
+  return PRIORITY_ORDER[priority] ?? 1;
+}
+
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
   for (const [key, value] of Object.entries(attrs)) {

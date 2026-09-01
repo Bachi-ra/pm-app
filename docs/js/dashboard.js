@@ -1,4 +1,4 @@
-import { escapeHtml, formatDate, todayIso, addDays, roleColor, EVERYONE_ROLE } from './utils.js';
+import { escapeHtml, formatDate, todayIso, addDays, roleColor, priorityColor, priorityRank, EVERYONE_ROLE } from './utils.js';
 
 function isAssignedToMember(task, member) {
   const role = (member.role || '').trim();
@@ -7,6 +7,10 @@ function isAssignedToMember(task, member) {
 
 function roleBadge(role) {
   return role ? `<span class="badge" style="background:${roleColor(role)}">${escapeHtml(role)}</span>` : '未割当';
+}
+
+function priorityBadge(priority) {
+  return `<span class="badge" style="background:${priorityColor(priority)}">${escapeHtml(priority || '中')}</span>`;
 }
 
 export function renderDashboard(container, ctx) {
@@ -20,7 +24,7 @@ export function renderDashboard(container, ctx) {
   const soon = addDays(today, 7);
   const upcomingTasks = tasks
     .filter((t) => t.status !== '完了' && t.endDate >= today && t.endDate <= soon)
-    .sort((a, b) => a.endDate.localeCompare(b.endDate));
+    .sort((a, b) => priorityRank(a.priority) - priorityRank(b.priority) || a.endDate.localeCompare(b.endDate));
 
   const overdueTasks = tasks.filter((t) => t.status !== '完了' && t.endDate < today);
 
@@ -118,7 +122,7 @@ function renderTaskMiniList(list, overdue) {
       .map(
         (t) => `<li class="${overdue ? 'overdue' : ''}">
           <span class="task-mini-title">${escapeHtml(t.title)}</span>
-          <span class="task-mini-meta">${roleBadge(t.assigneeRole)} / 期限 ${formatDate(t.endDate)}</span>
+          <span class="task-mini-meta">${priorityBadge(t.priority)} ${roleBadge(t.assigneeRole)} / 期限 ${formatDate(t.endDate)}</span>
         </li>`
       )
       .join('')}
