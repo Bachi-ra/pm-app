@@ -21,7 +21,7 @@ function priorityBadge(priority) {
   return `<span class="badge" style="background:${priorityColor(priority)}">${escapeHtml(priority)}</span>`;
 }
 
-const filterState = { assigneeRole: 'all', category: 'all', status: 'all', priority: 'all' };
+const filterState = { assigneeRole: 'all', category: 'all', status: 'all', priority: 'all', onlyMine: false };
 
 export function renderTasks(container, ctx) {
   const { members, tasks, currentMember, isAdmin } = ctx;
@@ -33,6 +33,7 @@ export function renderTasks(container, ctx) {
     if (filterState.category !== 'all' && t.category !== filterState.category) return false;
     if (filterState.status !== 'all' && t.status !== filterState.status) return false;
     if (filterState.priority !== 'all' && t.priority !== filterState.priority) return false;
+    if (filterState.onlyMine && !isTaskOwner(t, currentMember)) return false;
     return true;
   });
 
@@ -55,6 +56,7 @@ export function renderTasks(container, ctx) {
           <option value="all">優先度: すべて</option>
           ${PRIORITY_LIST.map((p) => `<option value="${p}" ${filterState.priority === p ? 'selected' : ''}>${p}</option>`).join('')}
         </select>
+        <button class="btn btn-small${filterState.onlyMine ? ' btn-primary' : ''}" id="filter-only-mine-btn">自分の担当のみ</button>
       </div>
       ${isAdmin ? '<button class="btn btn-primary" id="add-task-btn">+ 新規タスク</button>' : ''}
     </div>
@@ -93,6 +95,10 @@ export function renderTasks(container, ctx) {
   });
   container.querySelector('#filter-priority').addEventListener('change', (e) => {
     filterState.priority = e.target.value;
+    renderTasks(container, ctx);
+  });
+  container.querySelector('#filter-only-mine-btn').addEventListener('click', () => {
+    filterState.onlyMine = !filterState.onlyMine;
     renderTasks(container, ctx);
   });
 
