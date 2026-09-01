@@ -295,6 +295,7 @@ textarea:focus {
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .data-table th {
@@ -320,6 +321,7 @@ textarea:focus {
   color: var(--text-muted);
   font-size: 0.82rem;
   margin-top: 2px;
+  white-space: normal;
 }
 
 .you-tag {
