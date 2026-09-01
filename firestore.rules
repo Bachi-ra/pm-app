@@ -123,8 +123,10 @@ service cloud.firestore {
     match /taskComments/{id} {
       allow read: if signedIn();
 
+      // 通常は投稿者本人のみ作成可能。管理者はバックアップ復元時に元の投稿者の
+      // まま書き戻せるよう、authorMemberIdの一致チェックを免除される。
       allow create: if signedIn() && hasClaim()
-        && request.resource.data.authorMemberId == claimedMemberId();
+        && (request.resource.data.authorMemberId == claimedMemberId() || isAdmin());
 
       // 投稿者本人は本文のみ編集可能。
       allow update: if signedIn() && hasClaim()
@@ -139,9 +141,10 @@ service cloud.firestore {
     match /versions/{id} {
       allow read: if signedIn();
 
+      // 通常はタスク担当者本人のみ作成可能。管理者はバックアップ復元時に元の
+      // 投稿者のまま書き戻せるよう、担当者チェック・createdBy一致チェックを免除される。
       allow create: if signedIn()
-        && (isAdmin() || isTaskOwner(request.resource.data.taskId))
-        && request.resource.data.createdBy == claimedMemberId();
+        && (isAdmin() || (isTaskOwner(request.resource.data.taskId) && request.resource.data.createdBy == claimedMemberId()));
 
       // PMまたはタスク担当者がステータスのみ変更できる。
       allow update: if signedIn()
@@ -159,8 +162,10 @@ service cloud.firestore {
     match /memos/{id} {
       allow read: if signedIn();
 
+      // 通常は投稿者本人のみ作成可能。管理者はバックアップ復元時に元の投稿者の
+      // まま書き戻せるよう、authorIdの一致チェックを免除される。
       allow create: if signedIn() && hasClaim()
-        && request.resource.data.authorId == claimedMemberId();
+        && (request.resource.data.authorId == claimedMemberId() || isAdmin());
 
       // 投稿者本人は本文のみ編集可能。
       allow update: if signedIn() && hasClaim()
@@ -204,8 +209,10 @@ service cloud.firestore {
     match /references/{id} {
       allow read: if signedIn();
 
+      // 通常は投稿者本人のみ作成可能。管理者はバックアップ復元時に元の投稿者の
+      // まま書き戻せるよう、uploadedByの一致チェックを免除される。
       allow create: if signedIn() && hasClaim()
-        && request.resource.data.uploadedBy == claimedMemberId();
+        && (request.resource.data.uploadedBy == claimedMemberId() || isAdmin());
 
       // 投稿者本人のみ編集可能(投稿者自体の付け替えは不可)。
       allow update: if signedIn() && hasClaim()

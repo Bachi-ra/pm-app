@@ -9,6 +9,7 @@ export function renderMembers(container, ctx) {
       ${isAdmin ? '<button class="btn btn-primary" id="add-member-btn">+ メンバー追加</button>' : ''}
     </div>
     ${isAdmin ? renderReadonlyLinkTool() : ''}
+    ${isAdmin ? renderBackupTool() : ''}
     <div class="table-scroll">
       <table class="data-table">
         <thead><tr><th>名前</th><th>役職</th><th>権限</th><th></th></tr></thead>
@@ -56,6 +57,63 @@ export function renderMembers(container, ctx) {
     });
   }
 
+  const exportBtn = container.querySelector('#backup-export-btn');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', async () => {
+      exportBtn.disabled = true;
+      try {
+        const backup = await ctx.api.exportAllData();
+        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pm-app-backup_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        alert(`バックアップの作成に失敗しました: ${err.message}`);
+      } finally {
+        exportBtn.disabled = false;
+      }
+    });
+  }
+
+  const importInput = container.querySelector('#backup-import-input');
+  const importBtn = container.querySelector('#backup-import-btn');
+  if (importInput && importBtn) {
+    importBtn.addEventListener('click', async () => {
+      const file = importInput.files && importInput.files[0];
+      const errorEl = container.querySelector('#backup-import-error');
+      errorEl.textContent = '';
+
+      if (!file) {
+        errorEl.textContent = 'ファイルを選択してください';
+        return;
+      }
+      if (
+        !confirm(
+          '本当に上書きしますか?\n\n現在のデータはすべて削除され、選択したファイルの内容に置き換わります。この操作は取り消せません。'
+        )
+      ) {
+        return;
+      }
+
+      importBtn.disabled = true;
+      try {
+        const text = await file.text();
+        const backup = JSON.parse(text);
+        await ctx.api.importAllData(backup);
+        await ctx.refresh();
+      } catch (err) {
+        errorEl.textContent = `復元に失敗しました: ${err.message}`;
+      } finally {
+        importBtn.disabled = false;
+      }
+    });
+  }
+
   container.querySelectorAll('[data-edit-id]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const member = members.find((m) => m.id === btn.dataset.editId);
@@ -86,6 +144,24 @@ function renderReadonlyLinkTool() {
           追加・編集・削除のボタンがすべて非表示になります。
         </p>
         <button type="button" class="btn btn-small" id="copy-readonly-link-btn">閲覧専用URLをコピー</button>
+      </div>
+    </details>
+  `;
+}
+
+function renderBackupTool() {
+  return `
+    <details class="milestone-admin">
+      <summary>データのバックアップ・復元</summary>
+      <div class="milestone-admin-body">
+        <p class="empty">全コレクションのデータをJSONファイルとして保存・復元できます。</p>
+        <button type="button" class="btn btn-small" id="backup-export-btn">JSONバックアップをダウンロード</button>
+        <div class="form-group" style="margin-top:12px">
+          <label>バックアップファイルから復元</label>
+          <input type="file" id="backup-import-input" accept="application/json" />
+        </div>
+        <button type="button" class="btn btn-small btn-danger" id="backup-import-btn">このファイルで上書き復元する</button>
+        <p class="form-error" id="backup-import-error"></p>
       </div>
     </details>
   `;

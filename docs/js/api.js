@@ -12,6 +12,7 @@ import {
   runTransaction,
   query,
   where,
+  writeBatch,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 
 function toObj(docSnap) {
@@ -630,6 +631,84 @@ async function deleteReference(id) {
   return removeDoc('references', id);
 }
 
+// ---- データのJSONバックアップ/インポート ----
+
+const BACKUP_COLLECTIONS = [
+  'members',
+  'tasks',
+  'milestones',
+  'memos',
+  'links',
+  'assets',
+  'references',
+  'taskComments',
+  'versions',
+  'activityLog',
+  'progressSnapshots',
+];
+
+async function exportAllData() {
+  await ensureSignedIn();
+  const collections = {};
+  for (const col of BACKUP_COLLECTIONS) {
+    collections[col] = await getAll(col);
+  }
+  return { exportedAt: new Date().toISOString(), collections };
+}
+
+async function deleteAllDocs(colName) {
+  const existing = await getAll(colName);
+  for (let i = 0; i < existing.length; i += 400) {
+    const batch = writeBatch(db);
+    for (const item of existing.slice(i, i + 400)) {
+      batch.delete(doc(db, colName, item.id));
+    }
+    await batch.commit();
+  }
+}
+
+async function writeAllDocs(colName, records) {
+  for (let i = 0; i < records.length; i += 400) {
+    const batch = writeBatch(db);
+    for (const item of records.slice(i, i + 400)) {
+      const { id, ...fields } = item;
+      if (!id) continue;
+      batch.set(doc(db, colName, id), fields);
+    }
+    await batch.commit();
+  }
+}
+
+// バックアップの各コレクションを、既存データを全削除してから書き戻す形で復元する。
+// 元のドキュメントIDを保持するので、タスクの依存関係やコメントの紐付けは維持される。
+//
+// membersだけは例外で、削除はせずバックアップの内容で上書き(無ければ作成)するだけに
+// している。理由: 復元中に自分自身のmemberドキュメントが一瞬でも消えると、
+// 「管理者かどうか」の判定(Firestoreルール側)ができなくなり、復元処理自体が
+// 続行不能になるため。副作用として、バックアップ後に追加されたメンバーは
+// インポートしても削除されない(手動でメンバータブから削除してください)。
+async function importAllData(backup) {
+  await ensureSignedIn();
+  if (!backup || typeof backup !== 'object' || !backup.collections) {
+    throw new Error('バックアップファイルの形式が正しくありません');
+  }
+
+  const memberRecords = Array.isArray(backup.collections.members) ? backup.collections.members : [];
+  await writeAllDocs('members', memberRecords);
+
+  // members復元後は「現在の管理者数」が実データとズレるため、meta/appInfoも合わせて更新する
+  // (ズレたままだと「最後の管理者は削除できません」の判定が正しく働かなくなるため)。
+  const adminCount = Math.max(memberRecords.filter((m) => m.isAdmin).length, 1);
+  await setDoc(doc(db, 'meta', 'appInfo'), { bootstrapped: true, adminCount }, { merge: true });
+
+  for (const col of BACKUP_COLLECTIONS) {
+    if (col === 'members') continue;
+    const records = Array.isArray(backup.collections[col]) ? backup.collections[col] : [];
+    await deleteAllDocs(col);
+    await writeAllDocs(col, records);
+  }
+}
+
 export const api = {
   getMyClaim,
   claimMember,
@@ -676,4 +755,6 @@ export const api = {
   createReference,
   updateReference,
   deleteReference,
+  exportAllData,
+  importAllData,
 };
