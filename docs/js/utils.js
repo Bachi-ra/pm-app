@@ -103,6 +103,14 @@ export function versionStatusColor(status) {
 
 export const ASSET_TYPE_LIST = ['BGM', 'SE', 'フォント', '画像', 'その他'];
 
+export const RENDER_STATUS_LIST = ['実行中', '完了', '中断'];
+
+const RENDER_STATUS_COLORS = { 実行中: '#2563eb', 完了: '#16a34a', 中断: '#9ca3af' };
+
+export function renderStatusColor(status) {
+  return RENDER_STATUS_COLORS[status] || RENDER_STATUS_COLORS['実行中'];
+}
+
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
   for (const [key, value] of Object.entries(attrs)) {

@@ -197,6 +197,19 @@ service cloud.firestore {
       allow write: if signedIn() && hasClaim();
     }
 
+    // 共有PC/レンダーキュー管理: 誰でも閲覧・新規登録可。
+    // ステータス/メモ/終了予定の変更と削除は登録者本人またはPMのみ。
+    match /renderJobs/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && hasClaim()
+        && request.resource.data.memberId == claimedMemberId();
+      allow update: if signedIn() && hasClaim()
+        && (resource.data.memberId == claimedMemberId() || isAdmin())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'note', 'estimatedEndAt']);
+      allow delete: if signedIn() && hasClaim()
+        && (resource.data.memberId == claimedMemberId() || isAdmin());
+    }
+
     match /references/{id} {
       allow read: if signedIn();
 

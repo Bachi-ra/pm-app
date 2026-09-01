@@ -7,6 +7,7 @@ import { renderMemos } from './memos.js';
 import { renderLinks } from './links.js';
 import { renderAssets } from './assets.js';
 import { renderReferences } from './references.js';
+import { renderRenderQueue } from './renderQueue.js';
 import { escapeHtml } from './utils.js';
 
 const isReadonlyMode = new URLSearchParams(window.location.search).get('readonly') === '1';
@@ -20,6 +21,7 @@ const TABS = {
   links: { label: 'リンク集', render: renderLinks },
   assets: { label: '素材', render: renderAssets },
   references: { label: '資料', render: renderReferences },
+  renderQueue: { label: 'レンダー', render: renderRenderQueue },
 };
 
 let data = {
@@ -30,6 +32,7 @@ let data = {
   links: [],
   assets: [],
   references: [],
+  renderJobs: [],
   notificationSettings: { discordWebhookUrl: '' },
 };
 let currentMemberId = null;
@@ -45,17 +48,19 @@ function getCurrentMember() {
 }
 
 async function loadData() {
-  const [members, tasks, milestones, memos, links, assets, references, notificationSettings] = await Promise.all([
-    api.getMembers(),
-    api.getTasks(),
-    api.getMilestones(),
-    api.getMemos(),
-    api.getLinks(),
-    api.getAssets(),
-    api.getReferences(),
-    api.getNotificationSettings(),
-  ]);
-  data = { members, tasks, milestones, memos, links, assets, references, notificationSettings };
+  const [members, tasks, milestones, memos, links, assets, references, renderJobs, notificationSettings] =
+    await Promise.all([
+      api.getMembers(),
+      api.getTasks(),
+      api.getMilestones(),
+      api.getMemos(),
+      api.getLinks(),
+      api.getAssets(),
+      api.getReferences(),
+      api.getRenderJobs(),
+      api.getNotificationSettings(),
+    ]);
+  data = { members, tasks, milestones, memos, links, assets, references, renderJobs, notificationSettings };
 }
 
 function buildCtx() {

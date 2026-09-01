@@ -236,7 +236,8 @@ async function loadAndRenderBurndown(container, ctx) {
 }
 
 export function renderDashboard(container, ctx) {
-  const { members, tasks, milestones, goToTab } = ctx;
+  const { members, tasks, milestones, renderJobs, goToTab } = ctx;
+  const activeRenderJobCount = renderJobs.filter((j) => j.status === '実行中').length;
 
   const counts = { 未着手: 0, 進行中: 0, 完了: 0 };
   for (const t of tasks) counts[t.status] = (counts[t.status] || 0) + 1;
@@ -297,6 +298,10 @@ export function renderDashboard(container, ctx) {
       <div class="card stat-card" data-tab="tasks">
         <div class="stat-value">${counts['完了']}</div>
         <div class="stat-label">完了</div>
+      </div>
+      <div class="card stat-card" data-tab="renderQueue">
+        <div class="stat-value">${activeRenderJobCount}</div>
+        <div class="stat-label">レンダー中</div>
       </div>
     </div>
 

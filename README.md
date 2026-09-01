@@ -139,12 +139,17 @@ npx serve docs
   全員可能、削除はPMのみ。ライセンス未確認の素材には警告バッジが表示されます
 - **資料**: 絵コンテや参考画像を画像URLで登録し、ギャラリー表示するタブです。タグで絞り込み
   可能。自分がアップロードした資料は編集・削除可能、PMは全資料を削除可能
+- **レンダー**: Mayaのレンダリングなど共有PCの使用状況を管理するタブです。「使用開始」フォーム
+  からPC名・内容・終了予定(任意)を登録すると、使用中のPC一覧に表示されます。終了予定時刻を
+  過ぎても「実行中」のままだと「予定時刻超過」の警告バッジが表示されます。登録した本人または
+  PMは「完了にする」「中断にする」「削除」が可能です。完了・中断になったジョブは「履歴」に
+  折りたたみ表示されます(直近10件)。ダッシュボードにも「レンダー中」の件数が表示されます
 
 ## データの保存場所・バックアップ
 
 データはFirebase Firestoreに保存されます(`members` / `tasks` / `milestones` /
-`memos` / `links` / `taskComments` / `versions` / `assets` / `references` の
-9コレクション)。Firebaseコンソールの「Firestore Database」からいつでも
+`memos` / `links` / `taskComments` / `versions` / `assets` / `references` /
+`renderJobs` の10コレクション)。Firebaseコンソールの「Firestore Database」からいつでも
 中身を確認・エクスポートできます。
 
 ## 権限について
