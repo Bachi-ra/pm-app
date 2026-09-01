@@ -41,6 +41,12 @@ service cloud.firestore {
       return signedIn() && hasClaim() && myMember().isAdmin == true;
     }
 
+    // 指定タスクの担当役職が自分の役職(または「全員」)と一致するか。
+    function isTaskOwner(taskId) {
+      let t = get(/databases/$(database)/documents/tasks/$(taskId)).data;
+      return signedIn() && hasClaim() && (t.assigneeRole == myMember().role || t.assigneeRole == '全員');
+    }
+
     // 最初の管理者登録(または、このルール公開後の一度きりの移行)が完了したかどうかの印。
     match /meta/appInfo {
       allow read: if signedIn();
@@ -115,6 +121,21 @@ service cloud.firestore {
       // 投稿者本人、または管理者が削除可能。
       allow delete: if signedIn() && hasClaim()
         && (resource.data.authorMemberId == claimedMemberId() || isAdmin());
+    }
+
+    match /versions/{id} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && (isAdmin() || isTaskOwner(request.resource.data.taskId))
+        && request.resource.data.createdBy == claimedMemberId();
+
+      // PMまたはタスク担当者がステータスのみ変更できる。
+      allow update: if signedIn()
+        && (isAdmin() || isTaskOwner(resource.data.taskId))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+
+      allow delete: if isAdmin();
     }
 
     match /milestones/{id} {

@@ -93,6 +93,14 @@ export function priorityRank(priority) {
   return PRIORITY_ORDER[priority] ?? 1;
 }
 
+export const VERSION_STATUS_LIST = ['レビュー待ち', '差し戻し', '承認'];
+
+const VERSION_STATUS_COLORS = { レビュー待ち: '#9ca3af', 差し戻し: '#dc2626', 承認: '#16a34a' };
+
+export function versionStatusColor(status) {
+  return VERSION_STATUS_COLORS[status] || VERSION_STATUS_COLORS['レビュー待ち'];
+}
+
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
   for (const [key, value] of Object.entries(attrs)) {

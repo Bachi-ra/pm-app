@@ -1,5 +1,5 @@
 import { db, ensureSignedIn, currentUid } from './firebaseClient.js';
-import { STATUS_LIST, PRIORITY_LIST } from './utils.js';
+import { STATUS_LIST, PRIORITY_LIST, VERSION_STATUS_LIST } from './utils.js';
 import {
   collection,
   getDocs,
@@ -318,6 +318,44 @@ async function deleteTaskComment(id) {
   return removeDoc('taskComments', id);
 }
 
+// ---- versions (カット/バージョン管理) ----
+
+async function getVersions(taskId) {
+  await ensureSignedIn();
+  const q = query(collection(db, 'versions'), where('taskId', '==', taskId));
+  const snap = await getDocs(q);
+  return snap.docs.map(toObj);
+}
+
+async function createVersion(taskId, data) {
+  const versionLabel = (data.versionLabel || '').trim();
+  if (!versionLabel) throw new Error('バージョン名は必須です');
+  if (!data.createdBy) throw new Error('投稿者が特定できません');
+
+  const url = (data.url || '').trim();
+  if (url && !/^https?:\/\//i.test(url)) throw new Error('URLはhttp(s)://から始めてください');
+
+  const payload = {
+    taskId,
+    versionLabel,
+    url,
+    note: (data.note || '').trim(),
+    status: VERSION_STATUS_LIST.includes(data.status) ? data.status : 'レビュー待ち',
+    createdBy: data.createdBy,
+    createdAt: new Date().toISOString(),
+  };
+  return createDoc('versions', payload);
+}
+
+async function updateVersionStatus(id, status) {
+  if (!VERSION_STATUS_LIST.includes(status)) throw new Error('不正なステータスです');
+  return updateDocFields('versions', id, { status });
+}
+
+async function deleteVersion(id) {
+  return removeDoc('versions', id);
+}
+
 // ---- milestones ----
 
 async function getMilestones() {
@@ -433,6 +471,10 @@ export const api = {
   createTaskComment,
   updateTaskComment,
   deleteTaskComment,
+  getVersions,
+  createVersion,
+  updateVersionStatus,
+  deleteVersion,
   getMilestones,
   createMilestone,
   updateMilestone,

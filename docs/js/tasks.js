@@ -5,10 +5,12 @@ import {
   getRoleOptions,
   roleColor,
   priorityColor,
+  versionStatusColor,
   EVERYONE_ROLE,
   STATUS_LIST,
   STATUS_CLASS,
   PRIORITY_LIST,
+  VERSION_STATUS_LIST,
 } from './utils.js';
 
 function roleBadge(role) {
@@ -136,13 +138,22 @@ export function renderTasks(container, ctx) {
       openCommentsModal(container, ctx, task);
     });
   });
+
+  container.querySelectorAll('[data-versions-id]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const task = tasks.find((t) => t.id === btn.dataset.versionsId);
+      openVersionsModal(container, ctx, task);
+    });
+  });
+}
+
+function isTaskOwner(task, currentMember) {
+  const myRole = currentMember ? (currentMember.role || '').trim() : '';
+  return Boolean(task.assigneeRole && myRole && (task.assigneeRole === EVERYONE_ROLE || task.assigneeRole === myRole));
 }
 
 function renderRow(task, allTasks, currentMember, isAdmin) {
-  const myRole = currentMember ? (currentMember.role || '').trim() : '';
-  const isOwner = Boolean(
-    task.assigneeRole && myRole && (task.assigneeRole === EVERYONE_ROLE || task.assigneeRole === myRole)
-  );
+  const isOwner = isTaskOwner(task, currentMember);
   const canQuickEdit = isOwner && !isAdmin;
 
   let primaryActions;
@@ -162,7 +173,7 @@ function renderRow(task, allTasks, currentMember, isAdmin) {
   } else {
     primaryActions = '';
   }
-  const actionCell = `${primaryActions}<button class="btn btn-small" data-comments-id="${task.id}">コメント</button>`;
+  const actionCell = `${primaryActions}<button class="btn btn-small" data-versions-id="${task.id}">バージョン</button><button class="btn btn-small" data-comments-id="${task.id}">コメント</button>`;
 
   const checklist = task.checklist || [];
   const checklistDone = checklist.filter((item) => item.done).length;
@@ -545,4 +556,126 @@ function openCommentsModal(container, ctx, task) {
       root.querySelector('#comment-form-error').textContent = err.message;
     }
   });
+}
+
+function versionAuthorName(members, id) {
+  const m = members.find((mm) => mm.id === id);
+  return m ? m.name : '退会したメンバー';
+}
+
+function renderVersionItem(version, members, canManage) {
+  const statusControl = canManage
+    ? `<select class="version-status-select">
+        ${VERSION_STATUS_LIST.map((s) => `<option value="${s}" ${version.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+      </select>
+      <button class="btn btn-small btn-primary" data-version-save="${version.id}">更新</button>`
+    : `<span class="badge" style="background:${versionStatusColor(version.status)}">${escapeHtml(version.status)}</span>`;
+
+  return `<li class="memo-item">
+    <div class="memo-meta">
+      <span class="memo-author">${escapeHtml(version.versionLabel)}</span>
+      <span class="memo-date">${formatDateTime(version.createdAt)} / ${escapeHtml(versionAuthorName(members, version.createdBy))}</span>
+    </div>
+    ${version.url ? `<div><a class="link-external" href="${escapeHtml(version.url)}" target="_blank" rel="noopener noreferrer">リンクを開く</a></div>` : ''}
+    ${version.note ? `<div class="memo-content">${escapeHtml(version.note)}</div>` : ''}
+    <div class="memo-actions">${statusControl}</div>
+  </li>`;
+}
+
+function openVersionsModal(container, ctx, task) {
+  const root = container.querySelector('#task-modal-root');
+  const { members, currentMember, isAdmin } = ctx;
+  const canManage = isAdmin || isTaskOwner(task, currentMember);
+
+  root.innerHTML = `
+    <div class="overlay">
+      <div class="modal">
+        <h3>バージョン: ${escapeHtml(task.title)}</h3>
+        <div id="versions-body"><p class="empty">読み込み中...</p></div>
+        ${
+          canManage
+            ? `<form id="version-form" class="memo-form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>バージョン名</label>
+                    <input type="text" name="versionLabel" required placeholder="例: v1" />
+                  </div>
+                  <div class="form-group">
+                    <label>URL(任意)</label>
+                    <input type="text" name="url" placeholder="https://..." />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>メモ</label>
+                  <textarea name="note" rows="2"></textarea>
+                </div>
+                <div class="memo-form-actions">
+                  <button type="submit" class="btn btn-primary">追加</button>
+                </div>
+                <p class="form-error" id="version-form-error"></p>
+              </form>`
+            : ''
+        }
+        <div class="modal-actions">
+          <span></span>
+          <div><button type="button" class="btn" id="modal-cancel">閉じる</button></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  root.querySelector('#modal-cancel').addEventListener('click', () => {
+    root.innerHTML = '';
+  });
+
+  async function loadAndRenderVersions() {
+    const body = root.querySelector('#versions-body');
+    try {
+      const versions = await ctx.api.getVersions(task.id);
+      const sorted = versions.slice().sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+      body.innerHTML =
+        sorted.length === 0
+          ? '<p class="empty">まだバージョンがありません</p>'
+          : `<ul class="memo-list">${sorted.map((v) => renderVersionItem(v, members, canManage)).join('')}</ul>`;
+
+      if (canManage) {
+        body.querySelectorAll('[data-version-save]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const li = btn.closest('li');
+            const select = li.querySelector('.version-status-select');
+            try {
+              await ctx.api.updateVersionStatus(btn.dataset.versionSave, select.value);
+              await loadAndRenderVersions();
+            } catch (err) {
+              alert(err.message);
+            }
+          });
+        });
+      }
+    } catch (err) {
+      body.innerHTML = `<p class="empty">読み込みに失敗しました: ${escapeHtml(err.message)}</p>`;
+    }
+  }
+
+  loadAndRenderVersions();
+
+  const form = root.querySelector('#version-form');
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        await ctx.api.createVersion(task.id, {
+          versionLabel: fd.get('versionLabel'),
+          url: fd.get('url'),
+          note: fd.get('note'),
+          createdBy: currentMember.id,
+        });
+        e.target.reset();
+        await loadAndRenderVersions();
+      } catch (err) {
+        root.querySelector('#version-form-error').textContent = err.message;
+      }
+    });
+  }
 }
