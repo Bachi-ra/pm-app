@@ -163,5 +163,13 @@ service cloud.firestore {
       allow read: if signedIn();
       allow write: if isAdmin();
     }
+
+    // 素材・権利管理表: 追加・編集はメンバー全員可、削除はPMのみ。
+    match /assets/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && hasClaim();
+      allow update: if signedIn() && hasClaim();
+      allow delete: if isAdmin();
+    }
   }
 }

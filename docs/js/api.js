@@ -1,5 +1,5 @@
 import { db, ensureSignedIn, currentUid } from './firebaseClient.js';
-import { STATUS_LIST, PRIORITY_LIST, VERSION_STATUS_LIST } from './utils.js';
+import { STATUS_LIST, PRIORITY_LIST, VERSION_STATUS_LIST, ASSET_TYPE_LIST } from './utils.js';
 import {
   collection,
   getDocs,
@@ -455,6 +455,46 @@ async function deleteLink(id) {
   return removeDoc('links', id);
 }
 
+// ---- assets (素材・権利管理) ----
+
+async function getAssets() {
+  return getAll('assets');
+}
+
+async function createAsset(data) {
+  const name = (data.name || '').trim();
+  if (!name) throw new Error('名前は必須です');
+
+  const payload = {
+    name,
+    type: ASSET_TYPE_LIST.includes(data.type) ? data.type : 'その他',
+    source: (data.source || '').trim(),
+    license: (data.license || '').trim(),
+    usedInTaskId: data.usedInTaskId || null,
+    note: (data.note || '').trim(),
+  };
+  return createDoc('assets', payload);
+}
+
+async function updateAsset(id, data) {
+  const payload = {};
+  if (data.name !== undefined) {
+    const name = String(data.name).trim();
+    if (!name) throw new Error('名前は必須です');
+    payload.name = name;
+  }
+  if (data.type !== undefined) payload.type = ASSET_TYPE_LIST.includes(data.type) ? data.type : 'その他';
+  if (data.source !== undefined) payload.source = String(data.source).trim();
+  if (data.license !== undefined) payload.license = String(data.license).trim();
+  if (data.usedInTaskId !== undefined) payload.usedInTaskId = data.usedInTaskId || null;
+  if (data.note !== undefined) payload.note = String(data.note).trim();
+  return updateDocFields('assets', id, payload);
+}
+
+async function deleteAsset(id) {
+  return removeDoc('assets', id);
+}
+
 export const api = {
   getMyClaim,
   claimMember,
@@ -487,4 +527,8 @@ export const api = {
   createLink,
   updateLink,
   deleteLink,
+  getAssets,
+  createAsset,
+  updateAsset,
+  deleteAsset,
 };

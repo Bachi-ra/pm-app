@@ -5,6 +5,7 @@ import { renderGantt } from './gantt.js';
 import { renderMembers } from './members.js';
 import { renderMemos } from './memos.js';
 import { renderLinks } from './links.js';
+import { renderAssets } from './assets.js';
 import { escapeHtml } from './utils.js';
 
 const TABS = {
@@ -14,9 +15,10 @@ const TABS = {
   members: { label: 'メンバー', render: renderMembers },
   memos: { label: 'メモ', render: renderMemos },
   links: { label: 'リンク集', render: renderLinks },
+  assets: { label: '素材', render: renderAssets },
 };
 
-let data = { members: [], tasks: [], milestones: [], memos: [], links: [] };
+let data = { members: [], tasks: [], milestones: [], memos: [], links: [], assets: [] };
 let currentMemberId = null;
 let activeTab = 'dashboard';
 
@@ -30,14 +32,15 @@ function getCurrentMember() {
 }
 
 async function loadData() {
-  const [members, tasks, milestones, memos, links] = await Promise.all([
+  const [members, tasks, milestones, memos, links, assets] = await Promise.all([
     api.getMembers(),
     api.getTasks(),
     api.getMilestones(),
     api.getMemos(),
     api.getLinks(),
+    api.getAssets(),
   ]);
-  data = { members, tasks, milestones, memos, links };
+  data = { members, tasks, milestones, memos, links, assets };
 }
 
 function buildCtx() {

@@ -101,6 +101,8 @@ export function versionStatusColor(status) {
   return VERSION_STATUS_COLORS[status] || VERSION_STATUS_COLORS['レビュー待ち'];
 }
 
+export const ASSET_TYPE_LIST = ['BGM', 'SE', 'フォント', '画像', 'その他'];
+
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
   for (const [key, value] of Object.entries(attrs)) {
