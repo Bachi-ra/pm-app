@@ -1,7 +1,6 @@
 import {
   escapeHtml,
   formatDate,
-  formatDateTime,
   todayIso,
   addDays,
   daysBetween,
@@ -107,45 +106,6 @@ function wireScheduleWidget(container, ctx) {
       alert(err.message);
     }
   });
-}
-
-const ACTIVITY_LABELS = {
-  task_status_changed: 'ステータス変更',
-  task_progress_changed: '進捗変更',
-  member_added: 'メンバー追加',
-  member_removed: 'メンバー削除',
-};
-
-function activityMemberName(members, id) {
-  const m = members.find((mm) => mm.id === id);
-  return m ? m.name : '不明なメンバー';
-}
-
-async function loadAndRenderActivity(container, ctx) {
-  const area = container.querySelector('#activity-area');
-  if (!area) return;
-  try {
-    const logs = await ctx.api.getActivityLog();
-    const sorted = logs
-      .slice()
-      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
-      .slice(0, 10);
-    area.innerHTML =
-      sorted.length === 0
-        ? '<p class="empty">まだアクティビティがありません</p>'
-        : `<ul class="task-mini-list">
-            ${sorted
-              .map(
-                (l) => `<li>
-                  <span class="task-mini-title">${escapeHtml(ACTIVITY_LABELS[l.type] || l.type)}: ${escapeHtml(l.detail || '')}</span>
-                  <span class="task-mini-meta">${escapeHtml(activityMemberName(ctx.members, l.memberId))} / ${formatDateTime(l.createdAt)}</span>
-                </li>`
-              )
-              .join('')}
-          </ul>`;
-  } catch (err) {
-    area.innerHTML = `<p class="empty">読み込みに失敗しました: ${escapeHtml(err.message)}</p>`;
-  }
 }
 
 function isAssignedToMember(task, member) {
@@ -397,11 +357,6 @@ export function renderDashboard(container, ctx) {
             </table></div>`
       }
     </div>
-
-    <div class="card">
-      <h3>最近のアクティビティ</h3>
-      <div id="activity-area"><p class="empty">読み込み中...</p></div>
-    </div>
   `;
 
   container.querySelectorAll('[data-tab]').forEach((node) => {
@@ -419,7 +374,6 @@ export function renderDashboard(container, ctx) {
   wireScheduleWidget(container, ctx);
   renderScheduleWidget(container, ctx);
   loadAndRenderBurndown(container, ctx);
-  loadAndRenderActivity(container, ctx);
 }
 
 function renderTaskMiniList(list, overdue) {
