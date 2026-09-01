@@ -48,6 +48,21 @@ function clampProgress(value, fallback) {
   return Math.max(0, Math.min(100, Math.round(n)));
 }
 
+function genId() {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function sanitizeChecklist(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((item) => item && typeof item.text === 'string' && item.text.trim())
+    .map((item) => ({
+      id: String(item.id || genId()),
+      text: String(item.text).trim(),
+      done: Boolean(item.done),
+    }));
+}
+
 // ---- identity (どの匿名セッションがどのメンバーか) ----
 
 async function getMyClaim() {
@@ -212,6 +227,7 @@ async function createTask(data) {
     progress: status === '完了' ? 100 : clampProgress(data.progress, 0),
     startDate: data.startDate,
     endDate: data.endDate,
+    checklist: sanitizeChecklist(data.checklist),
   };
   return createDoc('tasks', payload);
 }
@@ -242,6 +258,7 @@ async function updateTask(id, data) {
   if (data.assigneeRole !== undefined) payload.assigneeRole = String(data.assigneeRole).trim() || null;
   if (data.startDate !== undefined) payload.startDate = data.startDate;
   if (data.endDate !== undefined) payload.endDate = data.endDate;
+  if (data.checklist !== undefined) payload.checklist = sanitizeChecklist(data.checklist);
 
   const nextStart = payload.startDate !== undefined ? payload.startDate : target.startDate;
   const nextEnd = payload.endDate !== undefined ? payload.endDate : target.endDate;

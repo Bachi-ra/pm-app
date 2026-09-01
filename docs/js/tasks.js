@@ -132,10 +132,14 @@ function renderRow(task, currentMember, isAdmin) {
     actionCell = '';
   }
 
+  const checklist = task.checklist || [];
+  const checklistDone = checklist.filter((item) => item.done).length;
+
   return `<tr>
     <td>
       <div class="task-title">${escapeHtml(task.title)}</div>
       ${task.description ? `<div class="task-desc">${escapeHtml(task.description)}</div>` : ''}
+      ${checklist.length > 0 ? `<div class="task-desc">チェックリスト ${checklistDone}/${checklist.length} 完了</div>` : ''}
     </td>
     <td>${escapeHtml(task.category)}</td>
     <td>${roleBadge(task.assigneeRole)}</td>
@@ -146,10 +150,69 @@ function renderRow(task, currentMember, isAdmin) {
   </tr>`;
 }
 
+function genClientId() {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function renderChecklistEditor(checklist) {
+  return `
+    ${
+      checklist.length === 0
+        ? '<p class="empty">項目がありません</p>'
+        : `<ul class="milestone-manage-list">
+            ${checklist
+              .map(
+                (item, i) => `<li>
+                  <div class="form-checkbox">
+                    <label><input type="checkbox" data-checklist-toggle="${i}" ${item.done ? 'checked' : ''} /> ${escapeHtml(item.text)}</label>
+                  </div>
+                  <button type="button" class="btn btn-small btn-danger" data-checklist-remove="${i}">削除</button>
+                </li>`
+              )
+              .join('')}
+          </ul>`
+    }
+    <div class="inline-form">
+      <input type="text" id="checklist-new-text" placeholder="項目を追加" />
+      <button type="button" class="btn btn-small" id="checklist-add-btn">追加</button>
+    </div>
+  `;
+}
+
+function wireChecklistEditor(section, checklist, rerender) {
+  section.querySelectorAll('[data-checklist-toggle]').forEach((el) => {
+    el.addEventListener('change', (e) => {
+      checklist[Number(e.target.dataset.checklistToggle)].done = e.target.checked;
+    });
+  });
+  section.querySelectorAll('[data-checklist-remove]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      checklist.splice(Number(btn.dataset.checklistRemove), 1);
+      rerender();
+    });
+  });
+
+  const input = section.querySelector('#checklist-new-text');
+  const addItem = () => {
+    const text = input.value.trim();
+    if (!text) return;
+    checklist.push({ id: genClientId(), text, done: false });
+    rerender();
+  };
+  section.querySelector('#checklist-add-btn').addEventListener('click', addItem);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addItem();
+    }
+  });
+}
+
 function openTaskModal(container, ctx, task) {
   const { members } = ctx;
   const root = container.querySelector('#task-modal-root');
   const isEdit = Boolean(task);
+  const checklist = (task?.checklist || []).map((item) => ({ ...item }));
 
   root.innerHTML = `
     <div class="overlay">
@@ -199,6 +262,10 @@ function openTaskModal(container, ctx, task) {
               <input type="number" name="progress" min="0" max="100" value="${task?.progress ?? 0}" />
             </div>
           </div>
+          <div class="form-group">
+            <label>チェックリスト</label>
+            <div id="checklist-section">${renderChecklistEditor(checklist)}</div>
+          </div>
           <div class="modal-actions">
             ${isEdit ? '<button type="button" class="btn btn-danger" id="modal-delete">削除</button>' : '<span></span>'}
             <div>
@@ -215,6 +282,13 @@ function openTaskModal(container, ctx, task) {
   root.querySelector('#modal-cancel').addEventListener('click', () => {
     root.innerHTML = '';
   });
+
+  function refreshChecklistSection() {
+    const section = root.querySelector('#checklist-section');
+    section.innerHTML = renderChecklistEditor(checklist);
+    wireChecklistEditor(section, checklist, refreshChecklistSection);
+  }
+  wireChecklistEditor(root.querySelector('#checklist-section'), checklist, refreshChecklistSection);
 
   const deleteBtn = root.querySelector('#modal-delete');
   if (deleteBtn) {
@@ -242,6 +316,7 @@ function openTaskModal(container, ctx, task) {
       endDate: form.get('endDate'),
       status: form.get('status'),
       progress: Number(form.get('progress')),
+      checklist,
     };
     try {
       if (isEdit) {
