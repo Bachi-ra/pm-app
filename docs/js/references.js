@@ -16,7 +16,7 @@ export function renderReferences(container, ctx) {
           ${allTags.map((t) => `<option value="${escapeHtml(t)}" ${tagFilter === t ? 'selected' : ''}>${escapeHtml(t)}</option>`).join('')}
         </select>
       </div>
-      <button class="btn btn-primary" id="add-reference-btn">+ 資料追加</button>
+      ${currentMember ? '<button class="btn btn-primary" id="add-reference-btn">+ 資料追加</button>' : ''}
     </div>
     ${
       sorted.length === 0
@@ -31,7 +31,8 @@ export function renderReferences(container, ctx) {
     renderReferences(container, ctx);
   });
 
-  container.querySelector('#add-reference-btn').addEventListener('click', () => openReferenceModal(container, ctx, null));
+  const addRefBtn = container.querySelector('#add-reference-btn');
+  if (addRefBtn) addRefBtn.addEventListener('click', () => openReferenceModal(container, ctx, null));
 
   container.querySelectorAll('[data-edit-id]').forEach((btn) => {
     btn.addEventListener('click', () => {

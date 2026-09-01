@@ -8,6 +8,7 @@ export function renderMembers(container, ctx) {
       <div></div>
       ${isAdmin ? '<button class="btn btn-primary" id="add-member-btn">+ メンバー追加</button>' : ''}
     </div>
+    ${isAdmin ? renderReadonlyLinkTool() : ''}
     <div class="table-scroll">
       <table class="data-table">
         <thead><tr><th>名前</th><th>役職</th><th>権限</th><th></th></tr></thead>
@@ -38,6 +39,23 @@ export function renderMembers(container, ctx) {
   const addBtn = container.querySelector('#add-member-btn');
   if (addBtn) addBtn.addEventListener('click', () => openMemberModal(container, ctx, null));
 
+  const copyReadonlyBtn = container.querySelector('#copy-readonly-link-btn');
+  if (copyReadonlyBtn) {
+    copyReadonlyBtn.addEventListener('click', async () => {
+      const url = `${window.location.origin}${window.location.pathname}?readonly=1`;
+      try {
+        await navigator.clipboard.writeText(url);
+        const original = copyReadonlyBtn.textContent;
+        copyReadonlyBtn.textContent = 'コピーしました';
+        setTimeout(() => {
+          copyReadonlyBtn.textContent = original;
+        }, 2000);
+      } catch (err) {
+        alert(`コピーに失敗しました。手動でこのURLを共有してください: ${url}`);
+      }
+    });
+  }
+
   container.querySelectorAll('[data-edit-id]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const member = members.find((m) => m.id === btn.dataset.editId);
@@ -56,6 +74,21 @@ export function renderMembers(container, ctx) {
       }
     });
   });
+}
+
+function renderReadonlyLinkTool() {
+  return `
+    <details class="milestone-admin">
+      <summary>閲覧専用URL(編集ボタンなしで共有できます)</summary>
+      <div class="milestone-admin-body">
+        <p class="empty">
+          チーム外の人(先生など)に進捗だけ見せたい場合に使えます。このURLでは
+          追加・編集・削除のボタンがすべて非表示になります。
+        </p>
+        <button type="button" class="btn btn-small" id="copy-readonly-link-btn">閲覧専用URLをコピー</button>
+      </div>
+    </details>
+  `;
 }
 
 function openMemberModal(container, ctx, member) {

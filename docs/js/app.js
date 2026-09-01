@@ -9,6 +9,8 @@ import { renderAssets } from './assets.js';
 import { renderReferences } from './references.js';
 import { escapeHtml } from './utils.js';
 
+const isReadonlyMode = new URLSearchParams(window.location.search).get('readonly') === '1';
+
 const TABS = {
   dashboard: { label: 'ダッシュボード', render: renderDashboard },
   tasks: { label: 'タスク一覧', render: renderTasks },
@@ -62,6 +64,7 @@ function buildCtx() {
     ...data,
     currentMember,
     isAdmin: Boolean(currentMember && currentMember.isAdmin),
+    isReadonly: isReadonlyMode,
     api,
     refresh,
     goToTab,
@@ -70,6 +73,10 @@ function buildCtx() {
 
 function renderHeader() {
   const currentMember = getCurrentMember();
+  if (isReadonlyMode) {
+    headerUser.innerHTML = '<span class="header-user-name">閲覧専用モード</span>';
+    return;
+  }
   if (!currentMember) {
     headerUser.innerHTML = '';
     return;
@@ -298,7 +305,7 @@ async function boot() {
 
   let claim;
   try {
-    claim = await api.getMyClaim();
+    claim = isReadonlyMode ? null : await api.getMyClaim();
     await loadData();
   } catch (err) {
     panel.innerHTML = `<p class="empty">読み込みに失敗しました: ${escapeHtml(err.message)}</p>`;
@@ -316,7 +323,9 @@ async function boot() {
     }
   }
 
-  if (!currentMemberId) {
+  // 閲覧専用モードは、名前を選ばせずcurrentMemberId=nullのまま全タブを表示する
+  // (編集系のUIはcurrentMemberが無いことで自動的に非表示になる)。
+  if (!isReadonlyMode && !currentMemberId) {
     tabsNav.innerHTML = '';
     headerUser.innerHTML = '';
     panel.innerHTML = '';

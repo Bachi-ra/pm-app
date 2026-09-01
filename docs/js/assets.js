@@ -1,7 +1,8 @@
 import { escapeHtml, ASSET_TYPE_LIST } from './utils.js';
 
 export function renderAssets(container, ctx) {
-  const { assets, tasks, isAdmin } = ctx;
+  const { assets, tasks, isAdmin, currentMember } = ctx;
+  const canEdit = Boolean(currentMember);
   const sorted = assets
     .slice()
     .sort((a, b) => a.type.localeCompare(b.type, 'ja') || a.name.localeCompare(b.name, 'ja'));
@@ -9,7 +10,7 @@ export function renderAssets(container, ctx) {
   container.innerHTML = `
     <div class="toolbar">
       <div></div>
-      <button class="btn btn-primary" id="add-asset-btn">+ 素材追加</button>
+      ${canEdit ? '<button class="btn btn-primary" id="add-asset-btn">+ 素材追加</button>' : ''}
     </div>
     ${
       sorted.length === 0
@@ -17,14 +18,15 @@ export function renderAssets(container, ctx) {
         : `<div class="table-scroll">
             <table class="data-table">
               <thead><tr><th>名前</th><th>種類</th><th>入手元</th><th>ライセンス</th><th>使用タスク</th><th>メモ</th><th></th></tr></thead>
-              <tbody>${sorted.map((a) => renderRow(a, tasks, isAdmin)).join('')}</tbody>
+              <tbody>${sorted.map((a) => renderRow(a, tasks, isAdmin, canEdit)).join('')}</tbody>
             </table>
           </div>`
     }
     <div class="modal-root" id="asset-modal-root"></div>
   `;
 
-  container.querySelector('#add-asset-btn').addEventListener('click', () => openAssetModal(container, ctx, null));
+  const addBtn = container.querySelector('#add-asset-btn');
+  if (addBtn) addBtn.addEventListener('click', () => openAssetModal(container, ctx, null));
 
   container.querySelectorAll('[data-edit-id]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -46,7 +48,7 @@ export function renderAssets(container, ctx) {
   });
 }
 
-function renderRow(asset, tasks, isAdmin) {
+function renderRow(asset, tasks, isAdmin, canEdit) {
   const usedTask = asset.usedInTaskId ? tasks.find((t) => t.id === asset.usedInTaskId) : null;
   const licenseUnknown = !asset.license;
   const isUrlSource = /^https?:\/\//i.test(asset.source || '');
@@ -65,7 +67,7 @@ function renderRow(asset, tasks, isAdmin) {
     <td>${usedTask ? escapeHtml(usedTask.title) : '-'}</td>
     <td>${asset.note ? escapeHtml(asset.note) : '-'}</td>
     <td class="nowrap">
-      <button class="btn btn-small" data-edit-id="${asset.id}">編集</button>
+      ${canEdit ? `<button class="btn btn-small" data-edit-id="${asset.id}">編集</button>` : ''}
       ${isAdmin ? `<button class="btn btn-small btn-danger" data-delete-id="${asset.id}">削除</button>` : ''}
     </td>
   </tr>`;

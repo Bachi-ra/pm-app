@@ -5,16 +5,20 @@ export function renderMemos(container, ctx) {
   const sorted = memos.slice().sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
   container.innerHTML = `
-    <div class="card">
-      <h3>メモを投稿</h3>
-      <form id="memo-form" class="memo-form">
-        <textarea name="content" rows="3" placeholder="共有したいメモや連絡事項を入力..." required></textarea>
-        <div class="memo-form-actions">
-          <button type="submit" class="btn btn-primary">投稿</button>
-        </div>
-        <p class="form-error" id="memo-form-error"></p>
-      </form>
-    </div>
+    ${
+      currentMember
+        ? `<div class="card">
+            <h3>メモを投稿</h3>
+            <form id="memo-form" class="memo-form">
+              <textarea name="content" rows="3" placeholder="共有したいメモや連絡事項を入力..." required></textarea>
+              <div class="memo-form-actions">
+                <button type="submit" class="btn btn-primary">投稿</button>
+              </div>
+              <p class="form-error" id="memo-form-error"></p>
+            </form>
+          </div>`
+        : ''
+    }
 
     ${
       sorted.length === 0
@@ -23,16 +27,19 @@ export function renderMemos(container, ctx) {
     }
   `;
 
-  container.querySelector('#memo-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = new FormData(e.target);
-    try {
-      await ctx.api.createMemo({ authorId: currentMember.id, content: form.get('content') });
-      await ctx.refresh();
-    } catch (err) {
-      container.querySelector('#memo-form-error').textContent = err.message;
-    }
-  });
+  const memoForm = container.querySelector('#memo-form');
+  if (memoForm) {
+    memoForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      try {
+        await ctx.api.createMemo({ authorId: currentMember.id, content: form.get('content') });
+        await ctx.refresh();
+      } catch (err) {
+        container.querySelector('#memo-form-error').textContent = err.message;
+      }
+    });
+  }
 
   container.querySelectorAll('[data-edit-memo]').forEach((btn) => {
     btn.addEventListener('click', () => {

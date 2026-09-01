@@ -515,13 +515,17 @@ function openCommentsModal(container, ctx, task) {
       <div class="modal">
         <h3>コメント: ${escapeHtml(task.title)}</h3>
         <div id="comments-body"><p class="empty">読み込み中...</p></div>
-        <form id="comment-form" class="memo-form">
-          <textarea name="text" rows="2" placeholder="コメントを入力..." required></textarea>
-          <div class="memo-form-actions">
-            <button type="submit" class="btn btn-primary">投稿</button>
-          </div>
-          <p class="form-error" id="comment-form-error"></p>
-        </form>
+        ${
+          currentMember
+            ? `<form id="comment-form" class="memo-form">
+                <textarea name="text" rows="2" placeholder="コメントを入力..." required></textarea>
+                <div class="memo-form-actions">
+                  <button type="submit" class="btn btn-primary">投稿</button>
+                </div>
+                <p class="form-error" id="comment-form-error"></p>
+              </form>`
+            : ''
+        }
         <div class="modal-actions">
           <span></span>
           <div><button type="button" class="btn" id="modal-cancel">閉じる</button></div>
@@ -551,17 +555,20 @@ function openCommentsModal(container, ctx, task) {
 
   loadAndRenderComments();
 
-  root.querySelector('#comment-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = new FormData(e.target);
-    try {
-      await ctx.api.createTaskComment(task.id, { authorMemberId: currentMember.id, text: form.get('text') });
-      e.target.reset();
-      await loadAndRenderComments();
-    } catch (err) {
-      root.querySelector('#comment-form-error').textContent = err.message;
-    }
-  });
+  const commentForm = root.querySelector('#comment-form');
+  if (commentForm) {
+    commentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      try {
+        await ctx.api.createTaskComment(task.id, { authorMemberId: currentMember.id, text: form.get('text') });
+        e.target.reset();
+        await loadAndRenderComments();
+      } catch (err) {
+        root.querySelector('#comment-form-error').textContent = err.message;
+      }
+    });
+  }
 }
 
 function versionAuthorName(members, id) {
