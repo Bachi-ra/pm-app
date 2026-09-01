@@ -6,6 +6,7 @@ import { renderMembers } from './members.js';
 import { renderMemos } from './memos.js';
 import { renderLinks } from './links.js';
 import { renderAssets } from './assets.js';
+import { renderReferences } from './references.js';
 import { escapeHtml } from './utils.js';
 
 const TABS = {
@@ -16,9 +17,10 @@ const TABS = {
   memos: { label: 'メモ', render: renderMemos },
   links: { label: 'リンク集', render: renderLinks },
   assets: { label: '素材', render: renderAssets },
+  references: { label: '資料', render: renderReferences },
 };
 
-let data = { members: [], tasks: [], milestones: [], memos: [], links: [], assets: [] };
+let data = { members: [], tasks: [], milestones: [], memos: [], links: [], assets: [], references: [] };
 let currentMemberId = null;
 let activeTab = 'dashboard';
 
@@ -32,15 +34,16 @@ function getCurrentMember() {
 }
 
 async function loadData() {
-  const [members, tasks, milestones, memos, links, assets] = await Promise.all([
+  const [members, tasks, milestones, memos, links, assets, references] = await Promise.all([
     api.getMembers(),
     api.getTasks(),
     api.getMilestones(),
     api.getMemos(),
     api.getLinks(),
     api.getAssets(),
+    api.getReferences(),
   ]);
-  data = { members, tasks, milestones, memos, links, assets };
+  data = { members, tasks, milestones, memos, links, assets, references };
 }
 
 function buildCtx() {

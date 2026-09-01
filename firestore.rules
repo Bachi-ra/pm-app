@@ -171,5 +171,21 @@ service cloud.firestore {
       allow update: if signedIn() && hasClaim();
       allow delete: if isAdmin();
     }
+
+    match /references/{id} {
+      allow read: if signedIn();
+
+      allow create: if signedIn() && hasClaim()
+        && request.resource.data.uploadedBy == claimedMemberId();
+
+      // 投稿者本人のみ編集可能(投稿者自体の付け替えは不可)。
+      allow update: if signedIn() && hasClaim()
+        && resource.data.uploadedBy == claimedMemberId()
+        && request.resource.data.uploadedBy == resource.data.uploadedBy;
+
+      // 投稿者本人、または管理者が削除可能。
+      allow delete: if signedIn() && hasClaim()
+        && (resource.data.uploadedBy == claimedMemberId() || isAdmin());
+    }
   }
 }

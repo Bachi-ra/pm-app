@@ -495,6 +495,59 @@ async function deleteAsset(id) {
   return removeDoc('assets', id);
 }
 
+// ---- references (絵コンテ/参考資料ギャラリー) ----
+
+function sanitizeTags(tags) {
+  if (Array.isArray(tags)) return tags.map((t) => String(t).trim()).filter(Boolean);
+  if (typeof tags === 'string') return tags.split(',').map((t) => t.trim()).filter(Boolean);
+  return [];
+}
+
+async function getReferences() {
+  return getAll('references');
+}
+
+async function createReference(data) {
+  const title = (data.title || '').trim();
+  const imageUrl = (data.imageUrl || '').trim();
+  if (!title) throw new Error('タイトルは必須です');
+  if (!imageUrl) throw new Error('画像URLは必須です');
+  if (!/^https?:\/\//i.test(imageUrl)) throw new Error('画像URLはhttp(s)://から始めてください');
+  if (!data.uploadedBy) throw new Error('投稿者が特定できません');
+
+  const payload = {
+    title,
+    imageUrl,
+    note: (data.note || '').trim(),
+    tags: sanitizeTags(data.tags),
+    uploadedBy: data.uploadedBy,
+    createdAt: new Date().toISOString(),
+  };
+  return createDoc('references', payload);
+}
+
+async function updateReference(id, data) {
+  const payload = {};
+  if (data.title !== undefined) {
+    const title = String(data.title).trim();
+    if (!title) throw new Error('タイトルは必須です');
+    payload.title = title;
+  }
+  if (data.imageUrl !== undefined) {
+    const imageUrl = String(data.imageUrl).trim();
+    if (!imageUrl) throw new Error('画像URLは必須です');
+    if (!/^https?:\/\//i.test(imageUrl)) throw new Error('画像URLはhttp(s)://から始めてください');
+    payload.imageUrl = imageUrl;
+  }
+  if (data.note !== undefined) payload.note = String(data.note).trim();
+  if (data.tags !== undefined) payload.tags = sanitizeTags(data.tags);
+  return updateDocFields('references', id, payload);
+}
+
+async function deleteReference(id) {
+  return removeDoc('references', id);
+}
+
 export const api = {
   getMyClaim,
   claimMember,
@@ -531,4 +584,8 @@ export const api = {
   createAsset,
   updateAsset,
   deleteAsset,
+  getReferences,
+  createReference,
+  updateReference,
+  deleteReference,
 };
