@@ -20,7 +20,16 @@ const TABS = {
   references: { label: '資料', render: renderReferences },
 };
 
-let data = { members: [], tasks: [], milestones: [], memos: [], links: [], assets: [], references: [] };
+let data = {
+  members: [],
+  tasks: [],
+  milestones: [],
+  memos: [],
+  links: [],
+  assets: [],
+  references: [],
+  notificationSettings: { discordWebhookUrl: '' },
+};
 let currentMemberId = null;
 let activeTab = 'dashboard';
 
@@ -34,7 +43,7 @@ function getCurrentMember() {
 }
 
 async function loadData() {
-  const [members, tasks, milestones, memos, links, assets, references] = await Promise.all([
+  const [members, tasks, milestones, memos, links, assets, references, notificationSettings] = await Promise.all([
     api.getMembers(),
     api.getTasks(),
     api.getMilestones(),
@@ -42,8 +51,9 @@ async function loadData() {
     api.getLinks(),
     api.getAssets(),
     api.getReferences(),
+    api.getNotificationSettings(),
   ]);
-  data = { members, tasks, milestones, memos, links, assets, references };
+  data = { members, tasks, milestones, memos, links, assets, references, notificationSettings };
 }
 
 function buildCtx() {

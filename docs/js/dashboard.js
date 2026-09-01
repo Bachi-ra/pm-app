@@ -13,6 +13,52 @@ function priorityBadge(priority) {
   return `<span class="badge" style="background:${priorityColor(priority)}">${escapeHtml(priority || '中')}</span>`;
 }
 
+const BROWSER_NOTIFY_KEY = 'pmapp_last_browser_notify_date';
+
+function maybeSendBrowserNotification(urgentTasks, today) {
+  if (urgentTasks.length === 0) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  let lastDate = null;
+  try {
+    lastDate = localStorage.getItem(BROWSER_NOTIFY_KEY);
+  } catch (err) {
+    return;
+  }
+  if (lastDate === today) return;
+
+  try {
+    new Notification('締切が近いタスクがあります', {
+      body: `3日以内に締切のタスクが${urgentTasks.length}件あります`,
+    });
+    localStorage.setItem(BROWSER_NOTIFY_KEY, today);
+  } catch (err) {
+    // 通知に失敗しても画面表示には影響させない
+  }
+}
+
+async function maybeSendDiscordNotification(ctx, urgentTasks, today) {
+  if (urgentTasks.length === 0) return;
+  const webhookUrl = ctx.notificationSettings?.discordWebhookUrl;
+  if (!webhookUrl) return;
+
+  try {
+    const claimed = await ctx.api.claimDailyDiscordNotification(today);
+    if (!claimed) return;
+
+    const lines = urgentTasks.slice(0, 10).map((t) => `・${t.title}(締切: ${formatDate(t.endDate)})`);
+    const content = `【締切リマインド】3日以内に締切の未完了タスクが${urgentTasks.length}件あります\n${lines.join('\n')}`;
+
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    });
+  } catch (err) {
+    // 通知に失敗しても画面表示には影響させない
+  }
+}
+
 export function renderDashboard(container, ctx) {
   const { members, tasks, milestones, goToTab } = ctx;
 
@@ -28,6 +74,10 @@ export function renderDashboard(container, ctx) {
 
   const overdueTasks = tasks.filter((t) => t.status !== '完了' && t.endDate < today);
 
+  const urgentTasks = tasks.filter((t) => t.status !== '完了' && t.endDate && t.endDate <= addDays(today, 3));
+  maybeSendBrowserNotification(urgentTasks, today);
+  maybeSendDiscordNotification(ctx, urgentTasks, today);
+
   const workload = members.map((m) => {
     const mine = tasks.filter((t) => isAssignedToMember(t, m));
     const done = mine.filter((t) => t.status === '完了').length;
@@ -42,7 +92,19 @@ export function renderDashboard(container, ctx) {
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 5);
 
+  const showNotifyBanner = 'Notification' in window && Notification.permission === 'default';
+
   container.innerHTML = `
+    ${
+      showNotifyBanner
+        ? `<div class="card">
+            <div class="toolbar">
+              <span>締切が近いタスクをブラウザ通知でお知らせできます。</span>
+              <button class="btn btn-small btn-primary" id="enable-notify-btn">通知を有効にする</button>
+            </div>
+          </div>`
+        : ''
+    }
     <div class="dashboard-grid">
       <div class="card stat-card" data-tab="tasks">
         <div class="stat-value">${total}</div>
@@ -114,6 +176,14 @@ export function renderDashboard(container, ctx) {
   container.querySelectorAll('[data-tab]').forEach((node) => {
     node.addEventListener('click', () => goToTab(node.dataset.tab));
   });
+
+  const enableNotifyBtn = container.querySelector('#enable-notify-btn');
+  if (enableNotifyBtn) {
+    enableNotifyBtn.addEventListener('click', async () => {
+      await Notification.requestPermission();
+      renderDashboard(container, ctx);
+    });
+  }
 }
 
 function renderTaskMiniList(list, overdue) {

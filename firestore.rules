@@ -57,6 +57,19 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // 締切リマインド通知の設定。discordWebhookUrlはPMのみ変更可能。
+    // lastDiscordNotifyDateは「今日はもう送った」という早い者勝ちの印で、
+    // どのメンバーのブラウザが最初にダッシュボードを開いたかによって更新される。
+    match /meta/notifications {
+      allow read: if signedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (
+        signedIn() && hasClaim() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastDiscordNotifyDate'])
+      );
+      allow delete: if false;
+    }
+
     match /members/{memberId} {
       allow read: if signedIn();
 

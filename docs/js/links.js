@@ -1,7 +1,7 @@
 import { escapeHtml } from './utils.js';
 
 export function renderLinks(container, ctx) {
-  const { links, isAdmin } = ctx;
+  const { links, isAdmin, notificationSettings } = ctx;
   const categories = [...new Set(links.map((l) => l.category).filter(Boolean))].sort();
   const sorted = links
     .slice()
@@ -12,6 +12,8 @@ export function renderLinks(container, ctx) {
       <div></div>
       ${isAdmin ? '<button class="btn btn-primary" id="add-link-btn">+ リンク追加</button>' : ''}
     </div>
+
+    ${isAdmin ? renderWebhookAdmin(notificationSettings) : ''}
 
     <datalist id="link-category-list">
       ${categories.map((c) => `<option value="${escapeHtml(c)}"></option>`).join('')}
@@ -30,6 +32,8 @@ export function renderLinks(container, ctx) {
 
     <div class="modal-root" id="link-modal-root"></div>
   `;
+
+  if (isAdmin) wireWebhookAdmin(container, ctx);
 
   const addBtn = container.querySelector('#add-link-btn');
   if (addBtn) addBtn.addEventListener('click', () => openLinkModal(container, ctx, null));
@@ -51,6 +55,41 @@ export function renderLinks(container, ctx) {
         alert(err.message);
       }
     });
+  });
+}
+
+function renderWebhookAdmin(notificationSettings) {
+  const currentUrl = notificationSettings?.discordWebhookUrl || '';
+  return `
+    <details class="milestone-admin">
+      <summary>締切リマインドのDiscord通知設定</summary>
+      <div class="milestone-admin-body">
+        <p class="empty">
+          締切が近い(3日以内)未完了タスクがある状態で誰かがアプリを開くと、
+          1日1回この宛先にリマインドを投稿します。空欄にすると通知しません。
+        </p>
+        <form id="webhook-form" class="inline-form">
+          <input type="text" name="webhookUrl" value="${escapeHtml(currentUrl)}" placeholder="https://discord.com/api/webhooks/..." style="flex:1;min-width:240px" />
+          <button type="submit" class="btn btn-small btn-primary">保存</button>
+        </form>
+        <p class="form-error" id="webhook-form-error"></p>
+      </div>
+    </details>
+  `;
+}
+
+function wireWebhookAdmin(container, ctx) {
+  const form = container.querySelector('#webhook-form');
+  if (!form) return;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = new FormData(form);
+    try {
+      await ctx.api.updateDiscordWebhookUrl(data.get('webhookUrl'));
+      await ctx.refresh();
+    } catch (err) {
+      container.querySelector('#webhook-form-error').textContent = err.message;
+    }
   });
 }
 

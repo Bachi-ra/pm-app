@@ -105,6 +105,33 @@ async function clearMyClaim() {
   await deleteDoc(doc(db, 'memberClaims', uid));
 }
 
+// ---- notification settings (締切リマインド) ----
+
+async function getNotificationSettings() {
+  await ensureSignedIn();
+  const snap = await getDoc(doc(db, 'meta', 'notifications'));
+  return snap.exists() ? snap.data() : { discordWebhookUrl: '' };
+}
+
+async function updateDiscordWebhookUrl(url) {
+  await ensureSignedIn();
+  await setDoc(doc(db, 'meta', 'notifications'), { discordWebhookUrl: (url || '').trim() }, { merge: true });
+}
+
+// その日まだ誰も送っていなければ「自分が送る」と宣言する(トランザクションで
+// 早い者勝ちにし、複数人が同時にアプリを開いても重複送信されないようにする)。
+async function claimDailyDiscordNotification(today) {
+  await ensureSignedIn();
+  const ref = doc(db, 'meta', 'notifications');
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const current = snap.exists() ? snap.data() : {};
+    if (current.lastDiscordNotifyDate === today) return false;
+    tx.set(ref, { ...current, lastDiscordNotifyDate: today }, { merge: true });
+    return true;
+  });
+}
+
 // ---- members ----
 
 async function getMembers() {
@@ -552,6 +579,9 @@ export const api = {
   getMyClaim,
   claimMember,
   clearMyClaim,
+  getNotificationSettings,
+  updateDiscordWebhookUrl,
+  claimDailyDiscordNotification,
   getMembers,
   createMember,
   updateMember,
