@@ -759,6 +759,78 @@ textarea:focus {
   text-decoration: underline;
 }
 
+/* calendar */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.calendar-title {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.calendar-weekday {
+  background: var(--primary-light);
+  padding: 6px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.calendar-cell {
+  background: var(--bg-card);
+  min-height: 84px;
+  padding: 4px 6px;
+  font-size: 0.72rem;
+  overflow: hidden;
+}
+
+.calendar-cell-empty {
+  background: var(--bg);
+}
+
+.calendar-cell-today {
+  background: var(--primary-light);
+}
+
+.calendar-date {
+  font-weight: 700;
+  font-size: 0.78rem;
+  margin-bottom: 2px;
+}
+
+.calendar-milestone {
+  color: #6b5b95;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-task {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 1px 4px;
+  border-radius: 4px;
+  margin-top: 1px;
+  color: #fff;
+}
+
 /* reference gallery */
 .reference-gallery {
   display: grid;

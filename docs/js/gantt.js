@@ -3,6 +3,10 @@ import { exportGanttToExcel } from './export.js';
 
 const DAY_WIDTH = 28;
 const LABEL_WIDTH = 220;
+const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
+
+let viewMode = 'gantt';
+let calendarMonth = todayIso().slice(0, 7);
 
 function isValidIsoDate(value) {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -20,11 +24,24 @@ export function renderGantt(container, ctx) {
         <span><i class="dot today-dot"></i>本日</span>
         <span><i class="dot milestone-dot"></i>マイルストーン</span>
       </div>
-      <button class="btn" id="export-excel-btn">Excel出力</button>
+      <div>
+        <button class="btn btn-small${viewMode === 'gantt' ? ' btn-primary' : ''}" id="view-gantt-btn">ガント</button>
+        <button class="btn btn-small${viewMode === 'calendar' ? ' btn-primary' : ''}" id="view-calendar-btn">カレンダー</button>
+        <button class="btn" id="export-excel-btn">Excel出力</button>
+      </div>
     </div>
     ${isAdmin ? renderMilestoneAdmin(milestones) : ''}
     <div id="gantt-chart-area"></div>
   `;
+
+  container.querySelector('#view-gantt-btn').addEventListener('click', () => {
+    viewMode = 'gantt';
+    renderGantt(container, ctx);
+  });
+  container.querySelector('#view-calendar-btn').addEventListener('click', () => {
+    viewMode = 'calendar';
+    renderGantt(container, ctx);
+  });
 
   container.querySelector('#export-excel-btn').addEventListener('click', async (e) => {
     const btn = e.currentTarget;
@@ -44,12 +61,88 @@ export function renderGantt(container, ctx) {
   if (isAdmin) wireMilestoneAdmin(container, ctx);
 
   const area = container.querySelector('#gantt-chart-area');
+
+  if (viewMode === 'calendar') {
+    area.innerHTML = buildCalendarHtml(tasks, milestones);
+    wireCalendarNav(container, ctx);
+    return;
+  }
+
   if (tasks.length === 0 && milestones.length === 0) {
     area.innerHTML = '<p class="empty">タスクまたはマイルストーンを登録するとガントチャートが表示されます</p>';
     return;
   }
 
   area.appendChild(buildGanttChart(tasks, milestones));
+}
+
+function shiftMonth(monthStr, delta) {
+  const [y, m] = monthStr.split('-').map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function buildCalendarHtml(tasks, milestones) {
+  const [yearStr, monthStr] = calendarMonth.split('-');
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+
+  const firstWeekday = new Date(`${calendarMonth}-01T00:00:00`).getDay();
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  const tasksByDate = {};
+  for (const t of tasks) {
+    if (!isValidIsoDate(t.endDate)) continue;
+    (tasksByDate[t.endDate] = tasksByDate[t.endDate] || []).push(t);
+  }
+  const milestonesByDate = {};
+  for (const ms of milestones) {
+    if (!isValidIsoDate(ms.date)) continue;
+    (milestonesByDate[ms.date] = milestonesByDate[ms.date] || []).push(ms);
+  }
+
+  const today = todayIso();
+  let cellsHtml = '';
+  for (let i = 0; i < firstWeekday; i++) {
+    cellsHtml += '<div class="calendar-cell calendar-cell-empty"></div>';
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateIso = `${calendarMonth}-${String(d).padStart(2, '0')}`;
+    const dayTasks = tasksByDate[dateIso] || [];
+    const dayMilestones = milestonesByDate[dateIso] || [];
+    cellsHtml += `<div class="calendar-cell${dateIso === today ? ' calendar-cell-today' : ''}">
+      <div class="calendar-date">${d}</div>
+      ${dayMilestones.map((ms) => `<div class="calendar-milestone" title="${escapeHtml(ms.title)}">${escapeHtml(ms.title)}</div>`).join('')}
+      ${dayTasks.map((t) => `<div class="calendar-task ${STATUS_CLASS[t.status]}" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</div>`).join('')}
+    </div>`;
+  }
+  const trailing = (7 - ((firstWeekday + daysInMonth) % 7)) % 7;
+  for (let i = 0; i < trailing; i++) {
+    cellsHtml += '<div class="calendar-cell calendar-cell-empty"></div>';
+  }
+
+  return `
+    <div class="calendar-header">
+      <button class="btn btn-small" id="calendar-prev">← 前月</button>
+      <div class="calendar-title">${year}年${month}月</div>
+      <button class="btn btn-small" id="calendar-next">次月 →</button>
+    </div>
+    <div class="calendar-grid">
+      ${WEEKDAY_LABELS.map((w) => `<div class="calendar-weekday">${w}</div>`).join('')}
+      ${cellsHtml}
+    </div>
+  `;
+}
+
+function wireCalendarNav(container, ctx) {
+  container.querySelector('#calendar-prev').addEventListener('click', () => {
+    calendarMonth = shiftMonth(calendarMonth, -1);
+    renderGantt(container, ctx);
+  });
+  container.querySelector('#calendar-next').addEventListener('click', () => {
+    calendarMonth = shiftMonth(calendarMonth, 1);
+    renderGantt(container, ctx);
+  });
 }
 
 function buildGanttChart(tasks, milestones) {
