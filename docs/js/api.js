@@ -229,6 +229,7 @@ async function createTask(data) {
     endDate: data.endDate,
     checklist: sanitizeChecklist(data.checklist),
     priority: PRIORITY_LIST.includes(data.priority) ? data.priority : '中',
+    dependsOn: Array.isArray(data.dependsOn) ? data.dependsOn.filter((id) => typeof id === 'string') : [],
   };
   return createDoc('tasks', payload);
 }
@@ -261,6 +262,11 @@ async function updateTask(id, data) {
   if (data.endDate !== undefined) payload.endDate = data.endDate;
   if (data.checklist !== undefined) payload.checklist = sanitizeChecklist(data.checklist);
   if (data.priority !== undefined) payload.priority = PRIORITY_LIST.includes(data.priority) ? data.priority : '中';
+  if (data.dependsOn !== undefined) {
+    payload.dependsOn = Array.isArray(data.dependsOn)
+      ? data.dependsOn.filter((depId) => typeof depId === 'string' && depId !== id)
+      : [];
+  }
 
   const nextStart = payload.startDate !== undefined ? payload.startDate : target.startDate;
   const nextEnd = payload.endDate !== undefined ? payload.endDate : target.endDate;

@@ -106,6 +106,11 @@ function buildGanttChart(tasks, milestones) {
       const barLeft = startOffset * DAY_WIDTH;
       const barWidth = Math.max(duration * DAY_WIDTH - 4, 6);
 
+      const depNames = (task.dependsOn || [])
+        .map((depId) => tasks.find((t) => t.id === depId))
+        .filter(Boolean)
+        .map((dep) => escapeHtml(dep.title));
+
       const label = `<div class="gantt-label-cell">
         <div class="gantt-task-title" title="${escapeHtml(task.title)}">${escapeHtml(task.title)}</div>
         <div class="gantt-task-assignee">${
@@ -113,6 +118,7 @@ function buildGanttChart(tasks, milestones) {
             ? `<span class="badge" style="background:${roleColor(task.assigneeRole)}">${escapeHtml(task.assigneeRole)}</span>`
             : '未割当'
         }</div>
+        ${depNames.length > 0 ? `<div class="gantt-task-assignee">依存: ${depNames.join('、')}</div>` : ''}
       </div>`;
 
       const bar = `<div class="gantt-row-track" style="width:${trackWidth}px;background-image:${weekendBg}">

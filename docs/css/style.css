@@ -357,6 +357,10 @@ textarea:focus {
   background: var(--done);
 }
 
+.badge-warning {
+  background: var(--danger);
+}
+
 /* progress bar */
 .progress-bar {
   width: 100px;

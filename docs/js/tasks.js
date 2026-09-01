@@ -68,7 +68,7 @@ export function renderTasks(container, ctx) {
               <th>タイトル</th><th>カテゴリ</th><th>担当役職</th><th>優先度</th><th>状態</th><th>進捗</th><th>期間</th><th></th>
             </tr></thead>
             <tbody>
-              ${filtered.map((t) => renderRow(t, currentMember, isAdmin)).join('')}
+              ${filtered.map((t) => renderRow(t, tasks, currentMember, isAdmin)).join('')}
             </tbody>
           </table></div>`
     }
@@ -130,7 +130,7 @@ export function renderTasks(container, ctx) {
   });
 }
 
-function renderRow(task, currentMember, isAdmin) {
+function renderRow(task, allTasks, currentMember, isAdmin) {
   const myRole = currentMember ? (currentMember.role || '').trim() : '';
   const isOwner = Boolean(
     task.assigneeRole && myRole && (task.assigneeRole === EVERYONE_ROLE || task.assigneeRole === myRole)
@@ -157,12 +157,18 @@ function renderRow(task, currentMember, isAdmin) {
 
   const checklist = task.checklist || [];
   const checklistDone = checklist.filter((item) => item.done).length;
+  const dependsOn = task.dependsOn || [];
+  const hasIncompleteDependency = dependsOn.some((depId) => {
+    const dep = allTasks.find((t) => t.id === depId);
+    return dep && dep.status !== '完了';
+  });
 
   return `<tr>
     <td>
       <div class="task-title">${escapeHtml(task.title)}</div>
       ${task.description ? `<div class="task-desc">${escapeHtml(task.description)}</div>` : ''}
       ${checklist.length > 0 ? `<div class="task-desc">チェックリスト ${checklistDone}/${checklist.length} 完了</div>` : ''}
+      ${hasIncompleteDependency ? '<span class="badge badge-warning">先行タスク未完了</span>' : ''}
     </td>
     <td>${escapeHtml(task.category)}</td>
     <td>${roleBadge(task.assigneeRole)}</td>
@@ -232,11 +238,30 @@ function wireChecklistEditor(section, checklist, rerender) {
   });
 }
 
+function renderDependencyEditor(otherTasks, dependsOn) {
+  if (otherTasks.length === 0) {
+    return '<p class="empty">他にタスクがありません</p>';
+  }
+  return `<ul class="milestone-manage-list" style="max-height:160px;overflow-y:auto">
+    ${otherTasks
+      .map(
+        (t) => `<li>
+          <div class="form-checkbox">
+            <label><input type="checkbox" data-dep-id="${t.id}" ${dependsOn.includes(t.id) ? 'checked' : ''} /> ${escapeHtml(t.title)}</label>
+          </div>
+        </li>`
+      )
+      .join('')}
+  </ul>`;
+}
+
 function openTaskModal(container, ctx, task) {
-  const { members } = ctx;
+  const { members, tasks } = ctx;
   const root = container.querySelector('#task-modal-root');
   const isEdit = Boolean(task);
   const checklist = (task?.checklist || []).map((item) => ({ ...item }));
+  const dependsOn = task?.dependsOn ? [...task.dependsOn] : [];
+  const otherTasks = tasks.filter((t) => t.id !== task?.id);
 
   root.innerHTML = `
     <div class="overlay">
@@ -296,6 +321,10 @@ function openTaskModal(container, ctx, task) {
             <label>チェックリスト</label>
             <div id="checklist-section">${renderChecklistEditor(checklist)}</div>
           </div>
+          <div class="form-group">
+            <label>依存タスク(このタスクより先に終わらせる必要があるタスク)</label>
+            <div id="deps-section">${renderDependencyEditor(otherTasks, dependsOn)}</div>
+          </div>
           <div class="modal-actions">
             ${isEdit ? '<button type="button" class="btn btn-danger" id="modal-delete">削除</button>' : '<span></span>'}
             <div>
@@ -319,6 +348,18 @@ function openTaskModal(container, ctx, task) {
     wireChecklistEditor(section, checklist, refreshChecklistSection);
   }
   wireChecklistEditor(root.querySelector('#checklist-section'), checklist, refreshChecklistSection);
+
+  root.querySelectorAll('[data-dep-id]').forEach((el) => {
+    el.addEventListener('change', (e) => {
+      const depId = e.target.dataset.depId;
+      if (e.target.checked) {
+        if (!dependsOn.includes(depId)) dependsOn.push(depId);
+      } else {
+        const idx = dependsOn.indexOf(depId);
+        if (idx !== -1) dependsOn.splice(idx, 1);
+      }
+    });
+  });
 
   const deleteBtn = root.querySelector('#modal-delete');
   if (deleteBtn) {
@@ -348,6 +389,7 @@ function openTaskModal(container, ctx, task) {
       progress: Number(form.get('progress')),
       checklist,
       priority: form.get('priority'),
+      dependsOn,
     };
     try {
       if (isEdit) {
