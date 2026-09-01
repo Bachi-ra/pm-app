@@ -1,5 +1,6 @@
 import { escapeHtml, formatDate, todayIso, addDays, daysBetween, roleColor, STATUS_CLASS } from './utils.js';
 import { exportGanttToExcel, exportScheduleToIcs } from './export.js';
+import { openTaskModal } from './tasks.js';
 
 const DAY_WIDTH = 28;
 const LABEL_WIDTH = 220;
@@ -14,8 +15,12 @@ function isValidIsoDate(value) {
 
 export function renderGantt(container, ctx) {
   const { tasks, milestones, isAdmin } = ctx;
+  const categories = [...new Set(tasks.map((t) => t.category))].sort();
 
   container.innerHTML = `
+    <datalist id="category-list">
+      ${categories.map((c) => `<option value="${escapeHtml(c)}"></option>`).join('')}
+    </datalist>
     <div class="toolbar">
       <div class="gantt-legend">
         <span><i class="dot status-todo"></i>未着手</span>
@@ -25,6 +30,7 @@ export function renderGantt(container, ctx) {
         <span><i class="dot milestone-dot"></i>マイルストーン</span>
       </div>
       <div>
+        ${isAdmin ? '<button class="btn btn-primary" id="add-task-inline-btn">+ 新規タスク</button>' : ''}
         <button class="btn btn-small${viewMode === 'gantt' ? ' btn-primary' : ''}" id="view-gantt-btn">ガント</button>
         <button class="btn btn-small${viewMode === 'calendar' ? ' btn-primary' : ''}" id="view-calendar-btn">カレンダー</button>
         <button class="btn" id="export-excel-btn">Excel出力</button>
@@ -33,7 +39,11 @@ export function renderGantt(container, ctx) {
     </div>
     ${isAdmin ? renderMilestoneAdmin(milestones) : ''}
     <div id="gantt-chart-area"></div>
+    <div class="modal-root" id="task-modal-root"></div>
   `;
+
+  const addTaskBtn = container.querySelector('#add-task-inline-btn');
+  if (addTaskBtn) addTaskBtn.addEventListener('click', () => openTaskModal(container, ctx, null));
 
   container.querySelector('#view-gantt-btn').addEventListener('click', () => {
     viewMode = 'gantt';
@@ -72,7 +82,7 @@ export function renderGantt(container, ctx) {
   const area = container.querySelector('#gantt-chart-area');
 
   if (viewMode === 'calendar') {
-    area.innerHTML = buildCalendarHtml(tasks, milestones);
+    area.innerHTML = buildCalendarHtml(tasks, milestones, calendarMonth, { allowCreate: isAdmin });
     wireCalendarNav(container, ctx);
     return;
   }
@@ -85,18 +95,18 @@ export function renderGantt(container, ctx) {
   area.appendChild(buildGanttChart(tasks, milestones));
 }
 
-function shiftMonth(monthStr, delta) {
+export function shiftMonth(monthStr, delta) {
   const [y, m] = monthStr.split('-').map(Number);
   const d = new Date(y, m - 1 + delta, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function buildCalendarHtml(tasks, milestones) {
-  const [yearStr, monthStr] = calendarMonth.split('-');
+export function buildCalendarHtml(tasks, milestones, monthStr, { allowCreate = false } = {}) {
+  const [yearStr, monthNumStr] = monthStr.split('-');
   const year = Number(yearStr);
-  const month = Number(monthStr);
+  const month = Number(monthNumStr);
 
-  const firstWeekday = new Date(`${calendarMonth}-01T00:00:00`).getDay();
+  const firstWeekday = new Date(`${monthStr}-01T00:00:00`).getDay();
   const daysInMonth = new Date(year, month, 0).getDate();
 
   const tasksByDate = {};
@@ -116,11 +126,14 @@ function buildCalendarHtml(tasks, milestones) {
     cellsHtml += '<div class="calendar-cell calendar-cell-empty"></div>';
   }
   for (let d = 1; d <= daysInMonth; d++) {
-    const dateIso = `${calendarMonth}-${String(d).padStart(2, '0')}`;
+    const dateIso = `${monthStr}-${String(d).padStart(2, '0')}`;
     const dayTasks = tasksByDate[dateIso] || [];
     const dayMilestones = milestonesByDate[dateIso] || [];
     cellsHtml += `<div class="calendar-cell${dateIso === today ? ' calendar-cell-today' : ''}">
-      <div class="calendar-date">${d}</div>
+      <div class="calendar-date-row">
+        <span class="calendar-date">${d}</span>
+        ${allowCreate ? `<button type="button" class="calendar-add-btn" data-add-date="${dateIso}" title="この日に新規タスクを追加">+</button>` : ''}
+      </div>
       ${dayMilestones.map((ms) => `<div class="calendar-milestone" title="${escapeHtml(ms.title)}">${escapeHtml(ms.title)}</div>`).join('')}
       ${dayTasks.map((t) => `<div class="calendar-task ${STATUS_CLASS[t.status]}" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</div>`).join('')}
     </div>`;
@@ -152,9 +165,15 @@ function wireCalendarNav(container, ctx) {
     calendarMonth = shiftMonth(calendarMonth, 1);
     renderGantt(container, ctx);
   });
+  container.querySelectorAll('[data-add-date]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const date = btn.dataset.addDate;
+      openTaskModal(container, ctx, null, { startDate: date, endDate: date });
+    });
+  });
 }
 
-function buildGanttChart(tasks, milestones) {
+export function buildGanttChart(tasks, milestones) {
   const allDates = [
     ...tasks.flatMap((t) => [t.startDate, t.endDate]),
     ...milestones.map((m) => m.date),

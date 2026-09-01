@@ -854,10 +854,34 @@ textarea:focus {
   background: var(--primary-light);
 }
 
+.calendar-date-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
 .calendar-date {
   font-weight: 700;
   font-size: 0.78rem;
-  margin-bottom: 2px;
+}
+
+.calendar-add-btn {
+  width: 16px;
+  height: 16px;
+  line-height: 14px;
+  padding: 0;
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  background: var(--bg-card);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.calendar-add-btn:hover {
+  background: var(--primary-light);
 }
 
 .calendar-milestone {

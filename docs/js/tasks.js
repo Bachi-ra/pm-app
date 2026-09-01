@@ -281,7 +281,7 @@ function renderDependencyEditor(otherTasks, dependsOn) {
   </ul>`;
 }
 
-function openTaskModal(container, ctx, task) {
+export function openTaskModal(container, ctx, task, prefill = null) {
   const { members, tasks } = ctx;
   const root = container.querySelector('#task-modal-root');
   const isEdit = Boolean(task);
@@ -318,11 +318,11 @@ function openTaskModal(container, ctx, task) {
           <div class="form-row">
             <div class="form-group">
               <label>開始日</label>
-              <input type="date" name="startDate" required value="${task?.startDate || ''}" />
+              <input type="date" name="startDate" required value="${task?.startDate || prefill?.startDate || ''}" />
             </div>
             <div class="form-group">
               <label>終了日</label>
-              <input type="date" name="endDate" required value="${task?.endDate || ''}" />
+              <input type="date" name="endDate" required value="${task?.endDate || prefill?.endDate || ''}" />
             </div>
           </div>
           <div class="form-row">
