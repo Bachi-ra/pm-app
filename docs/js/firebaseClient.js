@@ -1,6 +1,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getStorage } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js';
 
 // Firebaseコンソール(プロジェクトの設定 → マイアプリ)で発行される設定値に置き換えてください。
 // apiKeyなどは公開されても問題ない値です(実際のアクセス制御はFirestoreのセキュリティルールで行います)。
@@ -15,6 +16,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 
 const auth = getAuth(app);
 

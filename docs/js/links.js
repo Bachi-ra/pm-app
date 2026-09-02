@@ -1,4 +1,5 @@
-import { escapeHtml } from './utils.js';
+import { escapeHtml, attachmentLinkHtml } from './utils.js';
+import { uploadAttachment, deleteAttachment } from './storage.js';
 
 export function renderLinks(container, ctx) {
   const { links, isAdmin, notificationSettings } = ctx;
@@ -95,7 +96,14 @@ function wireWebhookAdmin(container, ctx) {
 
 function renderRow(link, isAdmin) {
   return `<tr>
-    <td><a class="link-external" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.title)}</a></td>
+    <td>
+      ${
+        link.url
+          ? `<a class="link-external" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.title)}</a>`
+          : escapeHtml(link.title)
+      }
+      ${link.attachment ? `<div class="task-desc">${attachmentLinkHtml(link.attachment)}</div>` : ''}
+    </td>
     <td>${escapeHtml(link.category || 'その他')}</td>
     <td>${escapeHtml(link.note || '-')}</td>
     <td class="nowrap">
@@ -123,8 +131,18 @@ function openLinkModal(container, ctx, link) {
             <input type="text" name="title" required value="${escapeHtml(link?.title || '')}" placeholder="例: Discordサーバー" />
           </div>
           <div class="form-group">
-            <label>URL</label>
-            <input type="text" name="url" required value="${escapeHtml(link?.url || '')}" placeholder="https://..." />
+            <label>URL(添付ファイルを使う場合は空欄でも可)</label>
+            <input type="text" name="url" value="${escapeHtml(link?.url || '')}" placeholder="https://..." />
+          </div>
+          <div class="form-group">
+            <label>添付ファイル(任意、15MBまで)</label>
+            ${link?.attachment ? `<p class="empty">現在の添付: ${escapeHtml(link.attachment.fileName)}</p>` : ''}
+            <input type="file" name="attachmentFile" />
+            ${
+              link?.attachment
+                ? `<div class="form-checkbox"><label><input type="checkbox" name="removeAttachment" /> 添付ファイルを削除する</label></div>`
+                : ''
+            }
           </div>
           <div class="form-group">
             <label>カテゴリ</label>
@@ -168,13 +186,27 @@ function openLinkModal(container, ctx, link) {
   root.querySelector('#link-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = new FormData(e.target);
-    const payload = {
-      title: form.get('title'),
-      url: form.get('url'),
-      category: form.get('category'),
-      note: form.get('note'),
-    };
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
     try {
+      let attachment;
+      const file = form.get('attachmentFile');
+      if (file && file.size > 0) {
+        attachment = await uploadAttachment('links', file);
+        if (link?.attachment) await deleteAttachment(link.attachment.path);
+      } else if (form.get('removeAttachment') === 'on') {
+        if (link?.attachment) await deleteAttachment(link.attachment.path);
+        attachment = null;
+      }
+
+      const payload = {
+        title: form.get('title'),
+        url: form.get('url'),
+        category: form.get('category'),
+        note: form.get('note'),
+      };
+      if (attachment !== undefined) payload.attachment = attachment;
+
       if (isEdit) {
         await ctx.api.updateLink(link.id, payload);
       } else {
@@ -184,6 +216,8 @@ function openLinkModal(container, ctx, link) {
       await ctx.refresh();
     } catch (err) {
       root.querySelector('#link-form-error').textContent = err.message;
+    } finally {
+      submitBtn.disabled = false;
     }
   });
 }

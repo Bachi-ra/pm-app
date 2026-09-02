@@ -1,4 +1,5 @@
-import { escapeHtml, ASSET_TYPE_LIST } from './utils.js';
+import { escapeHtml, ASSET_TYPE_LIST, attachmentLinkHtml } from './utils.js';
+import { uploadAttachment, deleteAttachment } from './storage.js';
 
 export function renderAssets(container, ctx) {
   const { assets, tasks, isAdmin, currentMember } = ctx;
@@ -65,7 +66,10 @@ function renderRow(asset, tasks, isAdmin, canEdit) {
     }</td>
     <td>${licenseUnknown ? '<span class="badge badge-warning">ライセンス未確認</span>' : escapeHtml(asset.license)}</td>
     <td>${usedTask ? escapeHtml(usedTask.title) : '-'}</td>
-    <td>${asset.note ? escapeHtml(asset.note) : '-'}</td>
+    <td>
+      ${asset.note ? escapeHtml(asset.note) : '-'}
+      ${asset.attachment ? `<div class="task-desc">${attachmentLinkHtml(asset.attachment)}</div>` : ''}
+    </td>
     <td class="nowrap">
       ${canEdit ? `<button class="btn btn-small" data-edit-id="${asset.id}">編集</button>` : ''}
       ${isAdmin ? `<button class="btn btn-small btn-danger" data-delete-id="${asset.id}">削除</button>` : ''}
@@ -114,6 +118,16 @@ function openAssetModal(container, ctx, asset) {
             <label>メモ</label>
             <textarea name="note" rows="2">${escapeHtml(asset?.note || '')}</textarea>
           </div>
+          <div class="form-group">
+            <label>添付ファイル(任意、15MBまで)</label>
+            ${asset?.attachment ? `<p class="empty">現在の添付: ${escapeHtml(asset.attachment.fileName)}</p>` : ''}
+            <input type="file" name="attachmentFile" />
+            ${
+              asset?.attachment
+                ? `<div class="form-checkbox"><label><input type="checkbox" name="removeAttachment" /> 添付ファイルを削除する</label></div>`
+                : ''
+            }
+          </div>
           <div class="modal-actions">
             ${isEdit && isAdmin ? '<button type="button" class="btn btn-danger" id="modal-delete">削除</button>' : '<span></span>'}
             <div>
@@ -148,15 +162,29 @@ function openAssetModal(container, ctx, asset) {
   root.querySelector('#asset-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = new FormData(e.target);
-    const payload = {
-      name: form.get('name'),
-      type: form.get('type'),
-      usedInTaskId: form.get('usedInTaskId') || null,
-      source: form.get('source'),
-      license: form.get('license'),
-      note: form.get('note'),
-    };
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
     try {
+      let attachment;
+      const file = form.get('attachmentFile');
+      if (file && file.size > 0) {
+        attachment = await uploadAttachment('assets', file);
+        if (asset?.attachment) await deleteAttachment(asset.attachment.path);
+      } else if (form.get('removeAttachment') === 'on') {
+        if (asset?.attachment) await deleteAttachment(asset.attachment.path);
+        attachment = null;
+      }
+
+      const payload = {
+        name: form.get('name'),
+        type: form.get('type'),
+        usedInTaskId: form.get('usedInTaskId') || null,
+        source: form.get('source'),
+        license: form.get('license'),
+        note: form.get('note'),
+      };
+      if (attachment !== undefined) payload.attachment = attachment;
+
       if (isEdit) {
         await ctx.api.updateAsset(asset.id, payload);
       } else {
@@ -166,6 +194,8 @@ function openAssetModal(container, ctx, asset) {
       await ctx.refresh();
     } catch (err) {
       root.querySelector('#asset-form-error').textContent = err.message;
+    } finally {
+      submitBtn.disabled = false;
     }
   });
 }

@@ -848,6 +848,11 @@ textarea:focus {
   text-decoration: underline;
 }
 
+.attachment-link {
+  font-weight: 500;
+  font-size: 0.85em;
+}
+
 .burndown-svg {
   width: 100%;
   height: auto;

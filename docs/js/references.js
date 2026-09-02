@@ -1,4 +1,5 @@
-import { escapeHtml, formatDateTime } from './utils.js';
+import { escapeHtml, formatDateTime, attachmentLinkHtml } from './utils.js';
+import { uploadAttachment, deleteAttachment } from './storage.js';
 
 let tagFilter = 'all';
 
@@ -64,12 +65,19 @@ function renderCard(ref, members, currentMember, isAdmin) {
   const canEdit = isOwner;
   const canDelete = isOwner || isAdmin;
   const tags = ref.tags || [];
+  const isImageAttachment = Boolean(ref.attachment && (ref.attachment.contentType || '').startsWith('image/'));
+  const thumbSrc = isImageAttachment ? ref.attachment.url : ref.imageUrl;
 
   return `<div class="reference-card">
-    <img class="reference-thumb" src="${escapeHtml(ref.imageUrl)}" alt="${escapeHtml(ref.title)}" loading="lazy" />
+    ${
+      thumbSrc
+        ? `<img class="reference-thumb" src="${escapeHtml(thumbSrc)}" alt="${escapeHtml(ref.title)}" loading="lazy" />`
+        : ''
+    }
     <div class="reference-body">
       <div class="reference-title">${escapeHtml(ref.title)}</div>
       ${ref.note ? `<div class="task-desc">${escapeHtml(ref.note)}</div>` : ''}
+      ${ref.attachment ? `<div class="task-desc">${attachmentLinkHtml(ref.attachment)}</div>` : ''}
       ${tags.length > 0 ? `<div class="reference-tags">${tags.map((t) => `<span class="badge" style="background:#6b7280">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
       <div class="memo-meta">
         <span class="memo-author">${escapeHtml(uploaderName(members, ref.uploadedBy))}</span>
@@ -101,8 +109,18 @@ function openReferenceModal(container, ctx, ref) {
             <input type="text" name="title" required value="${escapeHtml(ref?.title || '')}" />
           </div>
           <div class="form-group">
-            <label>画像URL</label>
-            <input type="text" name="imageUrl" required value="${escapeHtml(ref?.imageUrl || '')}" placeholder="https://..." />
+            <label>画像URL(添付ファイルを使う場合は空欄でも可)</label>
+            <input type="text" name="imageUrl" value="${escapeHtml(ref?.imageUrl || '')}" placeholder="https://..." />
+          </div>
+          <div class="form-group">
+            <label>添付ファイル(任意、15MBまで。画像ファイルを直接アップロードできます)</label>
+            ${ref?.attachment ? `<p class="empty">現在の添付: ${escapeHtml(ref.attachment.fileName)}</p>` : ''}
+            <input type="file" name="attachmentFile" />
+            ${
+              ref?.attachment
+                ? `<div class="form-checkbox"><label><input type="checkbox" name="removeAttachment" /> 添付ファイルを削除する</label></div>`
+                : ''
+            }
           </div>
           <div class="form-group">
             <label>タグ(カンマ区切り、任意)</label>
@@ -146,13 +164,27 @@ function openReferenceModal(container, ctx, ref) {
   root.querySelector('#reference-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const form = new FormData(e.target);
-    const payload = {
-      title: form.get('title'),
-      imageUrl: form.get('imageUrl'),
-      tags: form.get('tags'),
-      note: form.get('note'),
-    };
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
     try {
+      let attachment;
+      const file = form.get('attachmentFile');
+      if (file && file.size > 0) {
+        attachment = await uploadAttachment('references', file);
+        if (ref?.attachment) await deleteAttachment(ref.attachment.path);
+      } else if (form.get('removeAttachment') === 'on') {
+        if (ref?.attachment) await deleteAttachment(ref.attachment.path);
+        attachment = null;
+      }
+
+      const payload = {
+        title: form.get('title'),
+        imageUrl: form.get('imageUrl'),
+        tags: form.get('tags'),
+        note: form.get('note'),
+      };
+      if (attachment !== undefined) payload.attachment = attachment;
+
       if (isEdit) {
         await ctx.api.updateReference(ref.id, payload);
       } else {
@@ -163,6 +195,8 @@ function openReferenceModal(container, ctx, ref) {
       await ctx.refresh();
     } catch (err) {
       root.querySelector('#reference-form-error').textContent = err.message;
+    } finally {
+      submitBtn.disabled = false;
     }
   });
 }

@@ -1,4 +1,5 @@
 import { db, ensureSignedIn, currentUid } from './firebaseClient.js';
+import { deleteAttachment } from './storage.js';
 import { STATUS_LIST, PRIORITY_LIST, VERSION_STATUS_LIST, ASSET_TYPE_LIST, RENDER_STATUS_LIST } from './utils.js';
 import {
   collection,
@@ -44,6 +45,21 @@ async function removeDoc(colName, id) {
   await ensureSignedIn();
   await deleteDoc(doc(db, colName, id));
   return null;
+}
+
+async function getOne(colName, id) {
+  await ensureSignedIn();
+  const snap = await getDoc(doc(db, colName, id));
+  return snap.exists() ? toObj(snap) : null;
+}
+
+// ドキュメント削除前に添付ファイル(Cloud Storage)があれば併せて削除する。
+async function removeDocWithAttachment(colName, id) {
+  const existing = await getOne(colName, id);
+  if (existing?.attachment?.path) {
+    await deleteAttachment(existing.attachment.path);
+  }
+  return removeDoc(colName, id);
 }
 
 function clampProgress(value, fallback) {
@@ -527,14 +543,16 @@ async function getLinks() {
 async function createLink(data) {
   const title = (data.title || '').trim();
   const url = (data.url || '').trim();
-  if (!title || !url) throw new Error('名前とURLは必須です');
-  if (!/^https?:\/\//i.test(url)) throw new Error('URLはhttp(s)://から始めてください');
+  if (!title) throw new Error('名前は必須です');
+  if (!url && !data.attachment) throw new Error('URLまたは添付ファイルのどちらかは必須です');
+  if (url && !/^https?:\/\//i.test(url)) throw new Error('URLはhttp(s)://から始めてください');
 
   const payload = {
     title,
     url,
     category: (data.category || 'その他').trim() || 'その他',
     note: (data.note || '').trim(),
+    attachment: data.attachment || null,
   };
   return createDoc('links', payload);
 }
@@ -548,17 +566,17 @@ async function updateLink(id, data) {
   }
   if (data.url !== undefined) {
     const url = String(data.url).trim();
-    if (!url) throw new Error('URLは必須です');
-    if (!/^https?:\/\//i.test(url)) throw new Error('URLはhttp(s)://から始めてください');
+    if (url && !/^https?:\/\//i.test(url)) throw new Error('URLはhttp(s)://から始めてください');
     payload.url = url;
   }
   if (data.category !== undefined) payload.category = String(data.category).trim() || 'その他';
   if (data.note !== undefined) payload.note = String(data.note).trim();
+  if (data.attachment !== undefined) payload.attachment = data.attachment;
   return updateDocFields('links', id, payload);
 }
 
 async function deleteLink(id) {
-  return removeDoc('links', id);
+  return removeDocWithAttachment('links', id);
 }
 
 // ---- assets (素材・権利管理) ----
@@ -578,6 +596,7 @@ async function createAsset(data) {
     license: (data.license || '').trim(),
     usedInTaskId: data.usedInTaskId || null,
     note: (data.note || '').trim(),
+    attachment: data.attachment || null,
   };
   return createDoc('assets', payload);
 }
@@ -594,11 +613,12 @@ async function updateAsset(id, data) {
   if (data.license !== undefined) payload.license = String(data.license).trim();
   if (data.usedInTaskId !== undefined) payload.usedInTaskId = data.usedInTaskId || null;
   if (data.note !== undefined) payload.note = String(data.note).trim();
+  if (data.attachment !== undefined) payload.attachment = data.attachment;
   return updateDocFields('assets', id, payload);
 }
 
 async function deleteAsset(id) {
-  return removeDoc('assets', id);
+  return removeDocWithAttachment('assets', id);
 }
 
 // ---- references (絵コンテ/参考資料ギャラリー) ----
@@ -617,8 +637,8 @@ async function createReference(data) {
   const title = (data.title || '').trim();
   const imageUrl = (data.imageUrl || '').trim();
   if (!title) throw new Error('タイトルは必須です');
-  if (!imageUrl) throw new Error('画像URLは必須です');
-  if (!/^https?:\/\//i.test(imageUrl)) throw new Error('画像URLはhttp(s)://から始めてください');
+  if (!imageUrl && !data.attachment) throw new Error('画像URLまたは添付ファイルのどちらかは必須です');
+  if (imageUrl && !/^https?:\/\//i.test(imageUrl)) throw new Error('画像URLはhttp(s)://から始めてください');
   if (!data.uploadedBy) throw new Error('投稿者が特定できません');
 
   const payload = {
@@ -628,6 +648,7 @@ async function createReference(data) {
     tags: sanitizeTags(data.tags),
     uploadedBy: data.uploadedBy,
     createdAt: new Date().toISOString(),
+    attachment: data.attachment || null,
   };
   return createDoc('references', payload);
 }
@@ -641,17 +662,17 @@ async function updateReference(id, data) {
   }
   if (data.imageUrl !== undefined) {
     const imageUrl = String(data.imageUrl).trim();
-    if (!imageUrl) throw new Error('画像URLは必須です');
-    if (!/^https?:\/\//i.test(imageUrl)) throw new Error('画像URLはhttp(s)://から始めてください');
+    if (imageUrl && !/^https?:\/\//i.test(imageUrl)) throw new Error('画像URLはhttp(s)://から始めてください');
     payload.imageUrl = imageUrl;
   }
   if (data.note !== undefined) payload.note = String(data.note).trim();
   if (data.tags !== undefined) payload.tags = sanitizeTags(data.tags);
+  if (data.attachment !== undefined) payload.attachment = data.attachment;
   return updateDocFields('references', id, payload);
 }
 
 async function deleteReference(id) {
-  return removeDoc('references', id);
+  return removeDocWithAttachment('references', id);
 }
 
 // ---- データのJSONバックアップ/インポート ----
