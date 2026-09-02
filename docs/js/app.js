@@ -5,8 +5,7 @@ import { renderGantt } from './gantt.js';
 import { renderMembers } from './members.js';
 import { renderMemos } from './memos.js';
 import { renderLinks } from './links.js';
-import { renderAssets } from './assets.js';
-import { renderReferences } from './references.js';
+import { renderMaterials } from './materials.js';
 import { renderRenderQueue } from './renderQueue.js';
 import { initThemeToggle } from './theme.js';
 import { escapeHtml } from './utils.js';
@@ -22,8 +21,7 @@ const TABS = {
   members: { label: 'メンバー', render: renderMembers },
   memos: { label: 'メモ', render: renderMemos },
   links: { label: 'リンク集', render: renderLinks },
-  assets: { label: '素材', render: renderAssets },
-  references: { label: '資料', render: renderReferences },
+  materials: { label: '素材・資料', render: renderMaterials },
   renderQueue: { label: 'レンダー', render: renderRenderQueue },
 };
 
