@@ -53,7 +53,7 @@ async function getOne(colName, id) {
   return snap.exists() ? toObj(snap) : null;
 }
 
-// ドキュメント削除前に添付ファイル(Cloud Storage)があれば併せて削除する。
+// ドキュメント削除前に添付ファイル(Cloudinary)があれば併せて削除を試みる。
 async function removeDocWithAttachment(colName, id) {
   const existing = await getOne(colName, id);
   if (existing?.attachment?.path) {
