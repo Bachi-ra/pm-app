@@ -20,8 +20,8 @@ const TABS = {
   gantt: { label: 'スケジュール', render: renderGantt },
   members: { label: 'メンバー', render: renderMembers },
   memos: { label: 'メモ', render: renderMemos },
-  links: { label: 'リンク集', render: renderLinks },
   materials: { label: '素材・資料', render: renderMaterials },
+  links: { label: 'リンク集', render: renderLinks },
   renderQueue: { label: 'レンダー', render: renderRenderQueue },
 };
 
@@ -194,12 +194,14 @@ async function refresh() {
   renderActiveTab();
 }
 
+const ADMIN_ONLY_TABS = ['gantt', 'members'];
+
 function visibleTabEntries() {
   const currentMember = getCurrentMember();
   const isAdmin = Boolean(currentMember && currentMember.isAdmin);
-  // スケジュールタブ(編集用)は管理者専用。他のメンバーはダッシュボードの
-  // ガントチャート/カレンダーで閲覧する
-  return Object.entries(TABS).filter(([key]) => key !== 'gantt' || isAdmin);
+  // スケジュール・メンバータブ(編集用)は管理者専用。他のメンバーはダッシュボードの
+  // ガントチャート/カレンダー・メンバー表で閲覧する
+  return Object.entries(TABS).filter(([key]) => !ADMIN_ONLY_TABS.includes(key) || isAdmin);
 }
 
 function unreadMemoCount() {
