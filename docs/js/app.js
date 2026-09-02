@@ -19,9 +19,9 @@ const TABS = {
   tasks: { label: 'タスク一覧', render: renderTasks },
   gantt: { label: 'スケジュール', render: renderGantt },
   members: { label: 'メンバー', render: renderMembers },
-  memos: { label: 'メモ', render: renderMemos },
   materials: { label: '素材・資料', render: renderMaterials },
   links: { label: 'リンク集', render: renderLinks },
+  memos: { label: 'メモ', render: renderMemos },
   renderQueue: { label: 'レンダー', render: renderRenderQueue },
 };
 
