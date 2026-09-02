@@ -1,5 +1,6 @@
-import { escapeHtml, ASSET_TYPE_LIST, attachmentLinkHtml } from './utils.js';
+import { escapeHtml, ASSET_TYPE_LIST } from './utils.js';
 import { uploadAttachment, deleteAttachment } from './storage.js';
+import { attachmentPreviewHtml, wireAttachmentPreviews } from './attachmentPreview.js';
 
 export function renderAssets(container, ctx) {
   const { assets, tasks, isAdmin, currentMember } = ctx;
@@ -47,6 +48,8 @@ export function renderAssets(container, ctx) {
       }
     });
   });
+
+  wireAttachmentPreviews(container);
 }
 
 function renderRow(asset, tasks, isAdmin, canEdit) {
@@ -68,7 +71,7 @@ function renderRow(asset, tasks, isAdmin, canEdit) {
     <td>${usedTask ? escapeHtml(usedTask.title) : '-'}</td>
     <td>
       ${asset.note ? escapeHtml(asset.note) : '-'}
-      ${asset.attachment ? `<div class="task-desc">${attachmentLinkHtml(asset.attachment)}</div>` : ''}
+      ${asset.attachment ? `<div class="task-desc">${attachmentPreviewHtml(asset.attachment)}</div>` : ''}
     </td>
     <td class="nowrap">
       ${canEdit ? `<button class="btn btn-small" data-edit-id="${asset.id}">編集</button>` : ''}

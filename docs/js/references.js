@@ -1,5 +1,6 @@
-import { escapeHtml, formatDateTime, attachmentLinkHtml } from './utils.js';
+import { escapeHtml, formatDateTime } from './utils.js';
 import { uploadAttachment, deleteAttachment } from './storage.js';
+import { attachmentPreviewHtml, wireAttachmentPreviews } from './attachmentPreview.js';
 
 let tagFilter = 'all';
 
@@ -53,6 +54,8 @@ export function renderReferences(container, ctx) {
       }
     });
   });
+
+  wireAttachmentPreviews(container);
 }
 
 function uploaderName(members, id) {
@@ -77,7 +80,7 @@ function renderCard(ref, members, currentMember, isAdmin) {
     <div class="reference-body">
       <div class="reference-title">${escapeHtml(ref.title)}</div>
       ${ref.note ? `<div class="task-desc">${escapeHtml(ref.note)}</div>` : ''}
-      ${ref.attachment ? `<div class="task-desc">${attachmentLinkHtml(ref.attachment)}</div>` : ''}
+      ${ref.attachment && !isImageAttachment ? `<div class="task-desc">${attachmentPreviewHtml(ref.attachment)}</div>` : ''}
       ${tags.length > 0 ? `<div class="reference-tags">${tags.map((t) => `<span class="badge" style="background:#6b7280">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
       <div class="memo-meta">
         <span class="memo-author">${escapeHtml(uploaderName(members, ref.uploadedBy))}</span>

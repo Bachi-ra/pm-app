@@ -1,5 +1,6 @@
-import { escapeHtml, attachmentLinkHtml } from './utils.js';
+import { escapeHtml } from './utils.js';
 import { uploadAttachment, deleteAttachment } from './storage.js';
+import { attachmentPreviewHtml, wireAttachmentPreviews } from './attachmentPreview.js';
 
 export function renderLinks(container, ctx) {
   const { links, isAdmin, notificationSettings } = ctx;
@@ -57,6 +58,8 @@ export function renderLinks(container, ctx) {
       }
     });
   });
+
+  wireAttachmentPreviews(container);
 }
 
 function renderWebhookAdmin(notificationSettings) {
@@ -102,7 +105,7 @@ function renderRow(link, isAdmin) {
           ? `<a class="link-external" href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.title)}</a>`
           : escapeHtml(link.title)
       }
-      ${link.attachment ? `<div class="task-desc">${attachmentLinkHtml(link.attachment)}</div>` : ''}
+      ${link.attachment ? `<div class="task-desc">${attachmentPreviewHtml(link.attachment)}</div>` : ''}
     </td>
     <td>${escapeHtml(link.category || 'その他')}</td>
     <td>${escapeHtml(link.note || '-')}</td>

@@ -23,12 +23,6 @@ export function formatFileSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
-export function attachmentLinkHtml(attachment) {
-  if (!attachment) return '';
-  const sizeLabel = formatFileSize(attachment.size);
-  return `<a class="link-external attachment-link" href="${escapeHtml(attachment.url)}" target="_blank" rel="noopener noreferrer">添付ファイル: ${escapeHtml(attachment.fileName)}${sizeLabel ? ` (${sizeLabel})` : ''}</a>`;
-}
-
 export function formatDate(isoDate) {
   if (!isoDate) return '';
   const [y, m, d] = isoDate.split('-');
