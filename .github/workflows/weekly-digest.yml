@@ -1,0 +1,24 @@
+name: 週次進捗まとめ (Discord)
+
+on:
+  schedule:
+    # UTC 0:00 = JST 月曜9:00(GitHub Actionsのscheduleは実行時刻が
+    # 多少前後する場合があります)
+    - cron: '0 0 * * 1'
+  workflow_dispatch: {}
+
+jobs:
+  send-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm install
+
+      - run: node scripts/weekly-discord-digest.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}

@@ -4,7 +4,8 @@
   "description": "卒業制作 チームページ(Firestore + GitHub Pages)",
   "private": true,
   "scripts": {
-    "migrate": "node scripts/migrate-mongo-to-firestore.js"
+    "migrate": "node scripts/migrate-mongo-to-firestore.js",
+    "weekly-digest": "node scripts/weekly-discord-digest.js"
   },
   "dependencies": {
     "mongodb": "^6.9.0",
