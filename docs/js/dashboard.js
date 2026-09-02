@@ -167,6 +167,31 @@ async function maybeSendDiscordNotification(ctx, urgentTasks, today) {
   }
 }
 
+// 既存の3日前デイリーリマインドとは別に、タスクごとに1回だけ
+// 「締切まで1週間を切った」通知を送る。
+async function maybeSendWeekBeforeDiscordNotification(ctx, targets, today) {
+  const webhookUrl = ctx.notificationSettings?.discordWebhookUrl;
+  if (!webhookUrl || targets.length === 0) return;
+
+  for (const task of targets) {
+    try {
+      const claimed = await ctx.api.claimTaskWeekBeforeNotification(task.id);
+      if (!claimed) continue;
+
+      const daysLeft = daysBetween(today, task.endDate);
+      const content = `【1週間前通知】${task.title} の締切まであと${daysLeft}日です`;
+
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+    } catch (err) {
+      // 通知に失敗しても画面表示には影響させない
+    }
+  }
+}
+
 function buildBurndownSvg(snapshots, milestones) {
   if (snapshots.length < 2) {
     return '<p class="empty">データが2日分たまるとグラフが表示されます(今日から記録を開始しています)</p>';
@@ -254,6 +279,11 @@ export function renderDashboard(container, ctx) {
   const urgentTasks = tasks.filter((t) => t.status !== '完了' && t.endDate && t.endDate <= addDays(today, 3));
   maybeSendBrowserNotification(urgentTasks, today);
   maybeSendDiscordNotification(ctx, urgentTasks, today);
+  maybeSendWeekBeforeDiscordNotification(
+    ctx,
+    upcomingTasks.filter((t) => !t.discordNotifiedWeekBefore),
+    today
+  );
 
   const workload = members.map((m) => {
     const mine = tasks.filter((t) => isAssignedToMember(t, m));

@@ -134,6 +134,19 @@ async function claimDailyDiscordNotification(today) {
   });
 }
 
+// まだこのタスクについて1週間前通知を送っていなければ「自分が送る」と宣言する
+// (claimDailyDiscordNotificationと同じ、トランザクションによる早い者勝ち)。
+async function claimTaskWeekBeforeNotification(taskId) {
+  await ensureSignedIn();
+  const ref = doc(db, 'tasks', taskId);
+  return runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists() || snap.data().discordNotifiedWeekBefore === true) return false;
+    tx.update(ref, { discordNotifiedWeekBefore: true });
+    return true;
+  });
+}
+
 // ---- progress snapshots (バーンダウンチャート) ----
 
 async function getProgressSnapshots() {
@@ -725,6 +738,7 @@ export const api = {
   getNotificationSettings,
   updateDiscordWebhookUrl,
   claimDailyDiscordNotification,
+  claimTaskWeekBeforeNotification,
   getProgressSnapshots,
   upsertProgressSnapshot,
   getMembers,

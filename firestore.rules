@@ -113,10 +113,15 @@ service cloud.firestore {
 
       // 担当役職が自分の役職(または「全員」)と一致するメンバーは、
       // 状態(status)と進捗(progress)のみ更新できる。それ以外は管理者のみ。
+      // ただしdiscordNotifiedWeekBefore(1週間前通知の送信済みフラグ)だけは
+      // signedInなら誰でも更新できる(claimTaskWeekBeforeNotificationのため)。
       allow update: if isAdmin() || (
         signedIn() && hasClaim() &&
         (resource.data.assigneeRole == myMember().role || resource.data.assigneeRole == '全員') &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'progress'])
+      ) || (
+        signedIn() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['discordNotifiedWeekBefore'])
       );
     }
 
