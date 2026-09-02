@@ -17,8 +17,8 @@
 // (アップロード先が埋まる程度のいたずらは可能だが、他のデータへの
 // 影響は無い)。プリセット側で許可するファイル形式・最大サイズを
 // 設定しておくと多少の対策になる。
-const CLOUDINARY_CLOUD_NAME = 'YOUR_CLOUD_NAME';
-const CLOUDINARY_UPLOAD_PRESET = 'YOUR_UPLOAD_PRESET';
+const CLOUDINARY_CLOUD_NAME = 'ivjb3fmi';
+const CLOUDINARY_UPLOAD_PRESET = 'File_Uploarding_system';
 
 const MAX_ATTACHMENT_SIZE = 15 * 1024 * 1024;
 
