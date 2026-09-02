@@ -261,7 +261,7 @@ async function loadAndRenderBurndown(container, ctx) {
 }
 
 export function renderDashboard(container, ctx) {
-  const { members, tasks, milestones, renderJobs, currentMember, goToTab } = ctx;
+  const { members, tasks, milestones, renderJobs, goToTab } = ctx;
   const activeRenderJobCount = renderJobs.filter((j) => j.status === '実行中').length;
 
   const counts = { 未着手: 0, 進行中: 0, 完了: 0 };
@@ -367,28 +367,6 @@ export function renderDashboard(container, ctx) {
                 .join('')}</ul>`
         }
       </div>
-    </div>
-
-    <div class="card">
-      <h3>メンバー</h3>
-      ${
-        members.length === 0
-          ? '<p class="empty">メンバーが登録されていません</p>'
-          : `<div class="table-scroll"><table class="data-table">
-              <thead><tr><th>名前</th><th>役職</th><th>権限</th></tr></thead>
-              <tbody>
-                ${members
-                  .map(
-                    (m) => `<tr>
-                      <td>${escapeHtml(m.name)}${m.id === currentMember?.id ? ' <span class="you-tag">(あなた)</span>' : ''}</td>
-                      <td>${m.role ? `<span class="badge" style="background:${roleColor(m.role)}">${escapeHtml(m.role)}</span>` : '-'}</td>
-                      <td>${m.isAdmin ? '<span class="badge status-doing">管理者</span>' : 'メンバー'}</td>
-                    </tr>`
-                  )
-                  .join('')}
-              </tbody>
-            </table></div>`
-      }
     </div>
 
     <div class="card">
