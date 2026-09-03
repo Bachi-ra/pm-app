@@ -313,23 +313,23 @@ export function renderDashboard(container, ctx) {
         : ''
     }
     <div class="dashboard-grid">
-      <div class="card stat-card" data-tab="tasks">
+      <div class="card stat-card stat-card-primary" data-tab="tasks">
         <div class="stat-value">${total}</div>
         <div class="stat-label">総タスク数</div>
       </div>
-      <div class="card stat-card" data-tab="tasks">
+      <div class="card stat-card stat-card-todo" data-tab="tasks">
         <div class="stat-value">${counts['未着手']}</div>
         <div class="stat-label">未着手</div>
       </div>
-      <div class="card stat-card" data-tab="tasks">
+      <div class="card stat-card stat-card-doing" data-tab="tasks">
         <div class="stat-value">${counts['進行中']}</div>
         <div class="stat-label">進行中</div>
       </div>
-      <div class="card stat-card" data-tab="tasks">
+      <div class="card stat-card stat-card-done" data-tab="tasks">
         <div class="stat-value">${counts['完了']}</div>
         <div class="stat-label">完了</div>
       </div>
-      <div class="card stat-card" data-tab="renderQueue">
+      <div class="card stat-card stat-card-doing" data-tab="renderQueue">
         <div class="stat-value">${activeRenderJobCount}</div>
         <div class="stat-label">レンダー中</div>
       </div>

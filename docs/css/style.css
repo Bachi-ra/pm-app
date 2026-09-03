@@ -201,19 +201,38 @@ body {
 /* dashboard */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 12px;
 }
 
 .stat-card {
   text-align: center;
   cursor: pointer;
+  border-top-width: 3px;
+  border-top-color: var(--stat-accent, var(--border));
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .stat-card:hover {
   border-color: var(--primary);
+  border-top-color: var(--primary);
   box-shadow: var(--shadow-md);
+}
+
+.stat-card-primary {
+  --stat-accent: var(--primary);
+}
+
+.stat-card-todo {
+  --stat-accent: var(--todo);
+}
+
+.stat-card-doing {
+  --stat-accent: var(--doing);
+}
+
+.stat-card-done {
+  --stat-accent: var(--done);
 }
 
 .stat-value {
@@ -1029,9 +1048,6 @@ textarea:focus {
 
 /* responsive */
 @media (max-width: 800px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
   .dashboard-cols {
     grid-template-columns: 1fr;
   }
@@ -1044,9 +1060,6 @@ textarea:focus {
 }
 
 @media (max-width: 480px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr 1fr;
-  }
   .toolbar {
     flex-direction: column;
     align-items: stretch;
