@@ -8,6 +8,7 @@ import {
   priorityColor,
   priorityRank,
   EVERYONE_ROLE,
+  memberRoles,
 } from './utils.js';
 import { buildGanttChart, buildCalendarHtml, shiftMonth } from './gantt.js';
 import { exportGanttToExcel, exportScheduleToIcs } from './export.js';
@@ -109,12 +110,19 @@ function wireScheduleWidget(container, ctx) {
 }
 
 function isAssignedToMember(task, member) {
-  const role = (member.role || '').trim();
-  return Boolean(task.assigneeRole && (task.assigneeRole === EVERYONE_ROLE || (role && task.assigneeRole === role)));
+  if (!task.assigneeRole) return false;
+  if (task.assigneeRole === EVERYONE_ROLE) return true;
+  return memberRoles(member).includes(task.assigneeRole);
 }
 
 function roleBadge(role) {
   return role ? `<span class="badge" style="background:${roleColor(role)}">${escapeHtml(role)}</span>` : '未割当';
+}
+
+function memberRoleBadges(member) {
+  const roles = memberRoles(member);
+  if (roles.length === 0) return '-';
+  return roles.map((r) => `<span class="badge" style="background:${roleColor(r)}">${escapeHtml(r)}</span>`).join(' ');
 }
 
 function priorityBadge(priority) {
@@ -381,7 +389,7 @@ export function renderDashboard(container, ctx) {
                   .map(
                     (w) => `<tr>
                       <td>${escapeHtml(w.member.name)}</td>
-                      <td>${w.member.role ? `<span class="badge" style="background:${roleColor(w.member.role)}">${escapeHtml(w.member.role)}</span>` : '-'}</td>
+                      <td>${memberRoleBadges(w.member)}</td>
                       <td>${w.count}</td>
                       <td>${w.done}</td>
                       <td>${renderMiniProgress(w.avg)}</td>

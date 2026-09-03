@@ -406,6 +406,13 @@ textarea:focus {
   background: #fafafb;
 }
 
+.role-group-row td {
+  background: var(--bg);
+  font-weight: 700;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
 .nowrap {
   white-space: nowrap;
 }

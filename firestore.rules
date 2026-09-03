@@ -41,10 +41,22 @@ service cloud.firestore {
       return signedIn() && hasClaim() && myMember().isAdmin == true;
     }
 
+    // メンバーの役職一覧を返す。新形式のroles(配列)を優先し、旧形式の
+    // role(単一文字列)しか無いメンバーはそれを1件配列として扱う
+    // (docs/js/utils.js の memberRoles() と同じ考え方)。
+    function memberRoleList(m) {
+      return 'roles' in m ? m.roles : (('role' in m && m.role != '') ? [m.role] : []);
+    }
+
+    // 指定の役職(または「全員」)が自分の役職一覧に含まれるか。
+    function hasAssignedRole(role) {
+      return role == '全員' || role in memberRoleList(myMember());
+    }
+
     // 指定タスクの担当役職が自分の役職(または「全員」)と一致するか。
     function isTaskOwner(taskId) {
       let t = get(/databases/$(database)/documents/tasks/$(taskId)).data;
-      return signedIn() && hasClaim() && (t.assigneeRole == myMember().role || t.assigneeRole == '全員');
+      return signedIn() && hasClaim() && hasAssignedRole(t.assigneeRole);
     }
 
     // 最初の管理者登録(または、このルール公開後の一度きりの移行)が完了したかどうかの印。
@@ -117,7 +129,7 @@ service cloud.firestore {
       // signedInなら誰でも更新できる(claimTaskWeekBeforeNotificationのため)。
       allow update: if isAdmin() || (
         signedIn() && hasClaim() &&
-        (resource.data.assigneeRole == myMember().role || resource.data.assigneeRole == '全員') &&
+        hasAssignedRole(resource.data.assigneeRole) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'progress'])
       ) || (
         signedIn() &&

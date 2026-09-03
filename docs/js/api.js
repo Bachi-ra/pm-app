@@ -197,7 +197,7 @@ async function createMember(data) {
 
   const payload = {
     name,
-    role: (data.role || '').trim(),
+    roles: sanitizeStringList(data.roles),
     isAdmin: isBootstrap ? true : Boolean(data.isAdmin),
   };
 
@@ -243,7 +243,7 @@ async function updateMember(id, data) {
 
     const payload = { isAdmin: willBeAdmin };
     if (data.name !== undefined) payload.name = String(data.name).trim();
-    if (data.role !== undefined) payload.role = String(data.role).trim();
+    if (data.roles !== undefined) payload.roles = sanitizeStringList(data.roles);
 
     tx.update(ref, payload);
     if (nextAdminCount !== meta.adminCount || !metaSnap.exists()) {
@@ -623,7 +623,7 @@ async function deleteAsset(id) {
 
 // ---- references (絵コンテ/参考資料ギャラリー) ----
 
-function sanitizeTags(tags) {
+function sanitizeStringList(tags) {
   if (Array.isArray(tags)) return tags.map((t) => String(t).trim()).filter(Boolean);
   if (typeof tags === 'string') return tags.split(',').map((t) => t.trim()).filter(Boolean);
   return [];
@@ -645,7 +645,7 @@ async function createReference(data) {
     title,
     imageUrl,
     note: (data.note || '').trim(),
-    tags: sanitizeTags(data.tags),
+    tags: sanitizeStringList(data.tags),
     uploadedBy: data.uploadedBy,
     createdAt: new Date().toISOString(),
     attachment: data.attachment || null,
@@ -666,7 +666,7 @@ async function updateReference(id, data) {
     payload.imageUrl = imageUrl;
   }
   if (data.note !== undefined) payload.note = String(data.note).trim();
-  if (data.tags !== undefined) payload.tags = sanitizeTags(data.tags);
+  if (data.tags !== undefined) payload.tags = sanitizeStringList(data.tags);
   if (data.attachment !== undefined) payload.attachment = data.attachment;
   return updateDocFields('references', id, payload);
 }

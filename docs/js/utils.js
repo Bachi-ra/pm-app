@@ -57,10 +57,21 @@ export function addDays(isoDate, n) {
 
 export const EVERYONE_ROLE = '全員';
 
+// メンバーの役職一覧を返す。新形式のroles(配列)を優先し、
+// 旧形式のrole(単一文字列)しか無いメンバーはそれを1件配列として扱う。
+export function memberRoles(member) {
+  if (!member) return [];
+  if (Array.isArray(member.roles)) {
+    return member.roles.map((r) => String(r).trim()).filter(Boolean);
+  }
+  if (member.role) {
+    return [String(member.role).trim()].filter(Boolean);
+  }
+  return [];
+}
+
 export function getRoleOptions(members) {
-  const roles = [...new Set(members.map((m) => (m.role || '').trim()).filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b, 'ja')
-  );
+  const roles = [...new Set(members.flatMap((m) => memberRoles(m)))].sort((a, b) => a.localeCompare(b, 'ja'));
   return [EVERYONE_ROLE, ...roles];
 }
 

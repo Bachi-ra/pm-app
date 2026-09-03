@@ -1,7 +1,65 @@
-import { escapeHtml, roleColor } from './utils.js';
+import { escapeHtml, roleColor, memberRoles } from './utils.js';
+
+const UNASSIGNED_GROUP = '役職未設定';
+
+function groupMembersByRole(members) {
+  const byRole = new Map();
+  const unassigned = [];
+
+  for (const m of members) {
+    const roles = memberRoles(m);
+    if (roles.length === 0) {
+      unassigned.push(m);
+      continue;
+    }
+    for (const role of roles) {
+      if (!byRole.has(role)) byRole.set(role, []);
+      byRole.get(role).push(m);
+    }
+  }
+
+  const groups = [...byRole.keys()]
+    .sort((a, b) => a.localeCompare(b, 'ja'))
+    .map((role) => ({
+      role,
+      members: byRole.get(role).slice().sort((a, b) => a.name.localeCompare(b.name, 'ja')),
+    }));
+
+  if (unassigned.length > 0) {
+    groups.push({
+      role: UNASSIGNED_GROUP,
+      members: unassigned.slice().sort((a, b) => a.name.localeCompare(b.name, 'ja')),
+    });
+  }
+
+  return groups;
+}
+
+function renderRoleBadges(member) {
+  const roles = memberRoles(member);
+  if (roles.length === 0) return '-';
+  return roles.map((r) => `<span class="badge" style="background:${roleColor(r)}">${escapeHtml(r)}</span>`).join(' ');
+}
+
+function renderMemberRow(m, isAdmin, currentMember) {
+  return `<tr>
+    <td>${escapeHtml(m.name)}${m.id === currentMember?.id ? ' <span class="you-tag">(あなた)</span>' : ''}</td>
+    <td>${renderRoleBadges(m)}</td>
+    <td>${m.isAdmin ? '<span class="badge status-doing">管理者</span>' : 'メンバー'}</td>
+    <td class="nowrap">
+      ${
+        isAdmin
+          ? `<button class="btn btn-small" data-edit-id="${m.id}">編集</button>
+             <button class="btn btn-small btn-danger" data-delete-id="${m.id}">削除</button>`
+          : ''
+      }
+    </td>
+  </tr>`;
+}
 
 export function renderMembers(container, ctx) {
   const { members, isAdmin, currentMember } = ctx;
+  const groups = groupMembersByRole(members);
 
   container.innerHTML = `
     <div class="toolbar">
@@ -14,23 +72,18 @@ export function renderMembers(container, ctx) {
       <table class="data-table">
         <thead><tr><th>名前</th><th>役職</th><th>権限</th><th></th></tr></thead>
         <tbody>
-          ${members
-            .map(
-              (m) => `<tr>
-                <td>${escapeHtml(m.name)}${m.id === currentMember?.id ? ' <span class="you-tag">(あなた)</span>' : ''}</td>
-                <td>${m.role ? `<span class="badge" style="background:${roleColor(m.role)}">${escapeHtml(m.role)}</span>` : '-'}</td>
-                <td>${m.isAdmin ? '<span class="badge status-doing">管理者</span>' : 'メンバー'}</td>
-                <td class="nowrap">
-                  ${
-                    isAdmin
-                      ? `<button class="btn btn-small" data-edit-id="${m.id}">編集</button>
-                         <button class="btn btn-small btn-danger" data-delete-id="${m.id}">削除</button>`
-                      : ''
-                  }
-                </td>
-              </tr>`
-            )
-            .join('')}
+          ${
+            members.length === 0
+              ? ''
+              : groups
+                  .map(
+                    (g) => `
+                      <tr class="role-group-row"><td colspan="4">${escapeHtml(g.role)}</td></tr>
+                      ${g.members.map((m) => renderMemberRow(m, isAdmin, currentMember)).join('')}
+                    `
+                  )
+                  .join('')
+          }
         </tbody>
       </table>
     </div>
@@ -181,8 +234,8 @@ function openMemberModal(container, ctx, member) {
             <input type="text" name="name" required value="${escapeHtml(member?.name || '')}" />
           </div>
           <div class="form-group">
-            <label>役職</label>
-            <input type="text" name="role" value="${escapeHtml(member?.role || '')}" placeholder="例: デザイン担当" />
+            <label>役職(カンマ区切りで複数入力可)</label>
+            <input type="text" name="roles" value="${escapeHtml(memberRoles(member).join(', '))}" placeholder="例: デザイン担当, 編集担当" />
           </div>
           <div class="form-group form-checkbox">
             <label><input type="checkbox" name="isAdmin" ${member?.isAdmin ? 'checked' : ''} /> 管理者権限を付与する</label>
@@ -209,7 +262,7 @@ function openMemberModal(container, ctx, member) {
     const form = new FormData(e.target);
     const payload = {
       name: form.get('name'),
-      role: form.get('role'),
+      roles: form.get('roles'),
       isAdmin: form.get('isAdmin') === 'on',
     };
     try {

@@ -8,7 +8,7 @@ import { renderLinks } from './links.js';
 import { renderMaterials } from './materials.js';
 import { renderRenderQueue } from './renderQueue.js';
 import { initThemeToggle } from './theme.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, memberRoles } from './utils.js';
 
 initThemeToggle();
 
@@ -262,10 +262,10 @@ function bootstrapFormHtml() {
 
 function selectMemberFormHtml() {
   const options = data.members
-    .map(
-      (m) =>
-        `<option value="${m.id}">${escapeHtml(m.name)}${m.role ? ` (${escapeHtml(m.role)})` : ''}</option>`
-    )
+    .map((m) => {
+      const roles = memberRoles(m).join('、');
+      return `<option value="${m.id}">${escapeHtml(m.name)}${roles ? ` (${escapeHtml(roles)})` : ''}</option>`;
+    })
     .join('');
   return `
     <div class="overlay">

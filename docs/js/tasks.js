@@ -11,6 +11,7 @@ import {
   STATUS_CLASS,
   PRIORITY_LIST,
   VERSION_STATUS_LIST,
+  memberRoles,
 } from './utils.js';
 
 function roleBadge(role) {
@@ -154,8 +155,9 @@ export function renderTasks(container, ctx) {
 }
 
 function isTaskOwner(task, currentMember) {
-  const myRole = currentMember ? (currentMember.role || '').trim() : '';
-  return Boolean(task.assigneeRole && myRole && (task.assigneeRole === EVERYONE_ROLE || task.assigneeRole === myRole));
+  if (!currentMember || !task.assigneeRole) return false;
+  if (task.assigneeRole === EVERYONE_ROLE) return true;
+  return memberRoles(currentMember).includes(task.assigneeRole);
 }
 
 function renderRow(task, allTasks, currentMember, isAdmin) {
