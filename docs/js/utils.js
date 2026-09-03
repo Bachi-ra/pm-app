@@ -75,6 +75,49 @@ export function getRoleOptions(members) {
   return [EVERYONE_ROLE, ...roles];
 }
 
+// 役職カテゴリの表示順。ここに無い役職は、この並びの後ろに
+// あいうえお順で表示される。
+export const ROLE_ORDER = ['リーダー', 'サブリーダー', 'モデラー', 'アニメータ', 'エフェクト', 'コンポジット', 'プロジェクトマネージャー'];
+
+export const UNASSIGNED_ROLE_GROUP = '役職未設定';
+
+function roleSortKey(role) {
+  const index = ROLE_ORDER.indexOf(role);
+  return index === -1 ? ROLE_ORDER.length : index;
+}
+
+// メンバーに紐づく任意のitem配列を、役職(ROLE_ORDER順、それ以外はあいうえお順)
+// でグループ分けする。複数の役職を持つメンバーのitemは、該当する
+// 役職グループすべてに重複して現れる。役職未設定のitemは最後にまとめる。
+export function groupByMemberRole(items, getMember) {
+  const byRole = new Map();
+  const unassigned = [];
+
+  for (const item of items) {
+    const roles = memberRoles(getMember(item));
+    if (roles.length === 0) {
+      unassigned.push(item);
+      continue;
+    }
+    for (const role of roles) {
+      if (!byRole.has(role)) byRole.set(role, []);
+      byRole.get(role).push(item);
+    }
+  }
+
+  const sortByName = (a, b) => getMember(a).name.localeCompare(getMember(b).name, 'ja');
+
+  const groups = [...byRole.keys()]
+    .sort((a, b) => roleSortKey(a) - roleSortKey(b) || a.localeCompare(b, 'ja'))
+    .map((role) => ({ role, items: byRole.get(role).slice().sort(sortByName) }));
+
+  if (unassigned.length > 0) {
+    groups.push({ role: UNASSIGNED_ROLE_GROUP, items: unassigned.slice().sort(sortByName) });
+  }
+
+  return groups;
+}
+
 const FIXED_ROLE_COLORS = {
   モデラー: '#dc2626',
   アニメーター: '#2563eb',

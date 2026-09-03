@@ -9,6 +9,7 @@ import {
   priorityRank,
   EVERYONE_ROLE,
   memberRoles,
+  groupByMemberRole,
 } from './utils.js';
 import { buildGanttChart, buildCalendarHtml, shiftMonth } from './gantt.js';
 import { exportGanttToExcel, exportScheduleToIcs } from './export.js';
@@ -301,6 +302,7 @@ export function renderDashboard(container, ctx) {
       : 0;
     return { member: m, count: mine.length, done, avg };
   });
+  const workloadGroups = groupByMemberRole(workload, (w) => w.member);
 
   const upcomingMilestones = milestones
     .filter((ms) => ms.date >= today)
@@ -385,15 +387,22 @@ export function renderDashboard(container, ctx) {
           : `<div class="table-scroll"><table class="data-table">
               <thead><tr><th>メンバー</th><th>役職</th><th>担当タスク数</th><th>完了数</th><th>平均進捗</th></tr></thead>
               <tbody>
-                ${workload
+                ${workloadGroups
                   .map(
-                    (w) => `<tr>
-                      <td>${escapeHtml(w.member.name)}</td>
-                      <td>${memberRoleBadges(w.member)}</td>
-                      <td>${w.count}</td>
-                      <td>${w.done}</td>
-                      <td>${renderMiniProgress(w.avg)}</td>
-                    </tr>`
+                    (g) => `
+                      <tr class="role-group-row"><td colspan="5">${escapeHtml(g.role)}</td></tr>
+                      ${g.items
+                        .map(
+                          (w) => `<tr>
+                            <td>${escapeHtml(w.member.name)}</td>
+                            <td>${memberRoleBadges(w.member)}</td>
+                            <td>${w.count}</td>
+                            <td>${w.done}</td>
+                            <td>${renderMiniProgress(w.avg)}</td>
+                          </tr>`
+                        )
+                        .join('')}
+                    `
                   )
                   .join('')}
               </tbody>

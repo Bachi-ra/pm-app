@@ -1,47 +1,7 @@
-import { escapeHtml, roleColor, memberRoles } from './utils.js';
-
-const UNASSIGNED_GROUP = '役職未設定';
-
-// 役職カテゴリの表示順。ここに無い役職は、この並びの後ろに
-// あいうえお順で表示される。
-const ROLE_ORDER = ['リーダー', 'サブリーダー', 'モデラー', 'アニメータ', 'エフェクト', 'コンポジット', 'プロジェクトマネージャー'];
-
-function roleSortKey(role) {
-  const index = ROLE_ORDER.indexOf(role);
-  return index === -1 ? ROLE_ORDER.length : index;
-}
+import { escapeHtml, roleColor, memberRoles, groupByMemberRole } from './utils.js';
 
 function groupMembersByRole(members) {
-  const byRole = new Map();
-  const unassigned = [];
-
-  for (const m of members) {
-    const roles = memberRoles(m);
-    if (roles.length === 0) {
-      unassigned.push(m);
-      continue;
-    }
-    for (const role of roles) {
-      if (!byRole.has(role)) byRole.set(role, []);
-      byRole.get(role).push(m);
-    }
-  }
-
-  const groups = [...byRole.keys()]
-    .sort((a, b) => roleSortKey(a) - roleSortKey(b) || a.localeCompare(b, 'ja'))
-    .map((role) => ({
-      role,
-      members: byRole.get(role).slice().sort((a, b) => a.name.localeCompare(b.name, 'ja')),
-    }));
-
-  if (unassigned.length > 0) {
-    groups.push({
-      role: UNASSIGNED_GROUP,
-      members: unassigned.slice().sort((a, b) => a.name.localeCompare(b.name, 'ja')),
-    });
-  }
-
-  return groups;
+  return groupByMemberRole(members, (m) => m).map((g) => ({ role: g.role, members: g.items }));
 }
 
 function renderRoleBadges(member) {
