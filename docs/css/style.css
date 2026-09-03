@@ -11,6 +11,10 @@
   --todo: #9aa1ac;
   --doing: #3b5bc4;
   --done: #3f8b53;
+  --milestone: #6b5b95;
+  --gantt-track-todo: #e5e7eb;
+  --gantt-track-doing: #d7ddf3;
+  --gantt-track-done: #d5ead9;
   --radius: 10px;
   --radius-sm: 8px;
   --shadow-sm: 0 1px 2px rgba(20, 22, 30, 0.05);
@@ -30,6 +34,10 @@
   --todo: #8b93a3;
   --doing: #5877e0;
   --done: #4caf6e;
+  --milestone: #a696dd;
+  --gantt-track-todo: #2d3340;
+  --gantt-track-doing: #263258;
+  --gantt-track-done: #1e3a2a;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.45);
 }
@@ -568,7 +576,7 @@ textarea:focus {
 }
 
 .milestone-dot {
-  background: #6b5b95;
+  background: var(--milestone);
 }
 
 .milestone-admin {
@@ -644,11 +652,11 @@ textarea:focus {
 }
 
 .gantt-category-row {
-  background: #f9fafb;
+  background: var(--bg);
 }
 
 .gantt-category-row .gantt-label-cell {
-  background: #f9fafb;
+  background: var(--bg);
   font-weight: 700;
 }
 
@@ -682,12 +690,12 @@ textarea:focus {
   font-size: 0.72rem;
   color: var(--text-muted);
   padding-top: 8px;
-  border-right: 1px solid #f0f1f3;
+  border-right: 1px solid var(--border);
   position: relative;
 }
 
 .gantt-day-cell.weekend {
-  color: #b3413a;
+  color: var(--danger);
 }
 
 .gantt-day-cell.month-start {
@@ -719,15 +727,15 @@ textarea:focus {
 }
 
 .gantt-bar.status-doing {
-  background: #d7ddf3;
+  background: var(--gantt-track-doing);
 }
 
 .gantt-bar.status-done {
-  background: #d5ead9;
+  background: var(--gantt-track-done);
 }
 
 .gantt-bar.status-todo {
-  background: #e5e7eb;
+  background: var(--gantt-track-todo);
 }
 
 .gantt-bar-fill {
@@ -767,7 +775,7 @@ textarea:focus {
 }
 
 .gantt-milestone-line {
-  background: #6b5b95;
+  background: var(--milestone);
 }
 
 .gantt-milestone-label {
@@ -775,9 +783,9 @@ textarea:focus {
   top: 2px;
   left: 4px;
   font-size: 0.68rem;
-  color: #6b5b95;
+  color: var(--milestone);
   white-space: nowrap;
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--bg-card);
   padding: 0 3px;
   border-radius: 3px;
 }
@@ -991,7 +999,7 @@ textarea:focus {
 }
 
 .calendar-milestone {
-  color: #6b5b95;
+  color: var(--milestone);
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;

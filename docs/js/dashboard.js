@@ -215,7 +215,7 @@ function buildBurndownSvg(snapshots, milestones) {
   const dots = snapshots
     .map(
       (s) =>
-        `<circle cx="${xFor(s.date).toFixed(1)}" cy="${yFor(s.remainingCount).toFixed(1)}" r="2.5" fill="#3b5bc4"><title>${escapeHtml(formatDate(s.date))}: 残り${s.remainingCount}件</title></circle>`
+        `<circle cx="${xFor(s.date).toFixed(1)}" cy="${yFor(s.remainingCount).toFixed(1)}" r="2.5" fill="var(--primary)"><title>${escapeHtml(formatDate(s.date))}: 残り${s.remainingCount}件</title></circle>`
     )
     .join('');
 
@@ -223,20 +223,20 @@ function buildBurndownSvg(snapshots, milestones) {
     .filter((ms) => ms.date >= minDate && ms.date <= maxDate)
     .map((ms) => {
       const x = xFor(ms.date).toFixed(1);
-      return `<line x1="${x}" y1="${padding.top}" x2="${x}" y2="${padding.top + plotH}" stroke="#7c3aed" stroke-dasharray="4 3" stroke-width="1" />
-        <text x="${Number(x) + 3}" y="${padding.top + 10}" font-size="9" fill="#7c3aed">${escapeHtml(ms.title)}</text>`;
+      return `<line x1="${x}" y1="${padding.top}" x2="${x}" y2="${padding.top + plotH}" stroke="var(--milestone)" stroke-dasharray="4 3" stroke-width="1" />
+        <text x="${Number(x) + 3}" y="${padding.top + 10}" font-size="9" fill="var(--milestone)">${escapeHtml(ms.title)}</text>`;
     })
     .join('');
 
   return `
     <svg viewBox="0 0 ${width} ${height}" class="burndown-svg" role="img" aria-label="残タスク数の推移">
-      <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${padding.top + plotH}" stroke="#e5e7eb" stroke-width="1" />
-      <line x1="${padding.left}" y1="${padding.top + plotH}" x2="${padding.left + plotW}" y2="${padding.top + plotH}" stroke="#e5e7eb" stroke-width="1" />
+      <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${padding.top + plotH}" stroke="var(--border)" stroke-width="1" />
+      <line x1="${padding.left}" y1="${padding.top + plotH}" x2="${padding.left + plotW}" y2="${padding.top + plotH}" stroke="var(--border)" stroke-width="1" />
       ${milestoneLines}
-      <polyline points="${points}" fill="none" stroke="#3b5bc4" stroke-width="2" />
+      <polyline points="${points}" fill="none" stroke="var(--primary)" stroke-width="2" />
       ${dots}
-      <text x="2" y="${padding.top + 4}" font-size="9" fill="#6b7280">${maxRemaining}</text>
-      <text x="2" y="${padding.top + plotH}" font-size="9" fill="#6b7280">0</text>
+      <text x="2" y="${padding.top + 4}" font-size="9" fill="var(--text-muted)">${maxRemaining}</text>
+      <text x="2" y="${padding.top + plotH}" font-size="9" fill="var(--text-muted)">0</text>
     </svg>
   `;
 }

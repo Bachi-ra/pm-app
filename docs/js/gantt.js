@@ -309,8 +309,8 @@ function buildHeaderTrack(rangeStart, totalDays) {
 }
 
 function buildWeekendGradient(rangeStart, totalDays) {
-  const sun = 'rgba(220,38,38,0.08)';
-  const sat = 'rgba(37,99,235,0.08)';
+  const sun = 'color-mix(in srgb, var(--danger) 10%, transparent)';
+  const sat = 'color-mix(in srgb, var(--doing) 10%, transparent)';
   const stops = [];
   for (let i = 0; i < totalDays; i++) {
     const d = new Date(addDays(rangeStart, i));
