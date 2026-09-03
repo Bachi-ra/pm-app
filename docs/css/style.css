@@ -552,6 +552,12 @@ textarea:focus {
   min-height: 1em;
 }
 
+.form-hint {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
 .inline-form {
   display: flex;
   gap: 8px;

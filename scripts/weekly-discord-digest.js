@@ -1,5 +1,8 @@
-// チーム全体の進捗まとめを週1回Discordに自動投稿するスクリプト。
+// チーム全体の進捗まとめ、および各メンバー個人の担当タスク・進捗まとめを
+// 週1回Discordに自動投稿するスクリプト。
 // GitHub Actions(.github/workflows/weekly-digest.yml)から定期実行される。
+// 個人宛の投稿は、そのメンバーのドキュメントに discordWebhookUrl が
+// 設定されている場合のみ行われる(メンバー管理画面から設定可能)。
 //
 // サービスアカウントの読み込み:
 //   CI(GitHub Actions): 環境変数 FIREBASE_SERVICE_ACCOUNT_JSON にJSON文字列として設定
@@ -40,6 +43,28 @@ function formatDate(isoDate) {
   if (!isoDate) return '';
   const [y, m, d] = isoDate.split('-');
   return `${y}/${Number(m)}/${Number(d)}`;
+}
+
+const EVERYONE_ROLE = '全員';
+
+// メンバーの役職一覧を返す。新形式のroles(配列)を優先し、旧形式の
+// role(単一文字列)しか無いメンバーはそれを1件配列として扱う
+// (docs/js/utils.js の memberRoles() と同じ考え方)。
+function memberRoles(member) {
+  if (!member) return [];
+  if (Array.isArray(member.roles)) {
+    return member.roles.map((r) => String(r).trim()).filter(Boolean);
+  }
+  if (member.role) {
+    return [String(member.role).trim()].filter(Boolean);
+  }
+  return [];
+}
+
+function isAssignedToMember(task, member) {
+  if (!task.assigneeRole) return false;
+  if (task.assigneeRole === EVERYONE_ROLE) return true;
+  return memberRoles(member).includes(task.assigneeRole);
 }
 
 function buildDigestMessage(tasks, milestones, today) {
@@ -83,27 +108,49 @@ function buildDigestMessage(tasks, milestones, today) {
   return lines.join('\n');
 }
 
-async function main() {
-  const serviceAccount = loadServiceAccount();
-  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-  const firestore = admin.firestore();
+function buildPersonalDigestMessage(member, tasks, today) {
+  const mine = tasks.filter((t) => isAssignedToMember(t, member));
+  const lines = [`【${member.name}さんの担当タスクまとめ】`];
 
-  const [tasksSnap, milestonesSnap, notificationsSnap] = await Promise.all([
-    firestore.collection('tasks').get(),
-    firestore.collection('milestones').get(),
-    firestore.collection('meta').doc('notifications').get(),
-  ]);
-
-  const webhookUrl = notificationsSnap.exists ? notificationsSnap.data().discordWebhookUrl : null;
-  if (!webhookUrl) {
-    console.log('Discord Webhook URLが設定されていないため、何もせず終了します。');
-    return;
+  if (mine.length === 0) {
+    lines.push('現在担当中のタスクはありません。');
+    return lines.join('\n');
   }
 
-  const tasks = tasksSnap.docs.map((d) => d.data());
-  const milestones = milestonesSnap.docs.map((d) => d.data());
-  const content = buildDigestMessage(tasks, milestones, todayIso());
+  const notDone = mine.filter((t) => t.status !== '完了');
+  const doneCount = mine.length - notDone.length;
+  lines.push(`担当タスク: ${mine.length}件(完了 ${doneCount}件)`);
+  lines.push('');
 
+  const overdue = notDone
+    .filter((t) => t.endDate && t.endDate < today)
+    .sort((a, b) => (a.endDate || '').localeCompare(b.endDate || ''));
+  const others = notDone
+    .filter((t) => !(t.endDate && t.endDate < today))
+    .sort((a, b) => (a.endDate || '').localeCompare(b.endDate || ''));
+
+  if (overdue.length > 0) {
+    lines.push(`■ 期限超過 (${overdue.length}件)`);
+    for (const t of overdue) {
+      lines.push(`・${t.title}(締切: ${formatDate(t.endDate)} / 進捗${t.progress}% / ${t.status})`);
+    }
+    lines.push('');
+  }
+
+  if (others.length > 0) {
+    lines.push(`■ 進行中・未着手 (${others.length}件)`);
+    for (const t of others.slice(0, 15)) {
+      lines.push(`・${t.title}(締切: ${formatDate(t.endDate)} / 進捗${t.progress}% / ${t.status})`);
+    }
+    if (others.length > 15) lines.push(`他 ${others.length - 15}件`);
+  } else if (overdue.length === 0) {
+    lines.push('進行中・未着手のタスクはありません。お疲れ様でした!');
+  }
+
+  return lines.join('\n');
+}
+
+async function postToDiscord(webhookUrl, content) {
   const res = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -112,8 +159,57 @@ async function main() {
   if (!res.ok) {
     throw new Error(`Discordへの投稿に失敗しました(status ${res.status})`);
   }
+}
 
-  console.log('週次進捗まとめをDiscordに投稿しました。');
+async function main() {
+  const serviceAccount = loadServiceAccount();
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  const firestore = admin.firestore();
+
+  const [tasksSnap, milestonesSnap, notificationsSnap, membersSnap] = await Promise.all([
+    firestore.collection('tasks').get(),
+    firestore.collection('milestones').get(),
+    firestore.collection('meta').doc('notifications').get(),
+    firestore.collection('members').get(),
+  ]);
+
+  const tasks = tasksSnap.docs.map((d) => d.data());
+  const milestones = milestonesSnap.docs.map((d) => d.data());
+  const members = membersSnap.docs.map((d) => d.data());
+  const today = todayIso();
+
+  let hadError = false;
+
+  const teamWebhookUrl = notificationsSnap.exists ? notificationsSnap.data().discordWebhookUrl : null;
+  if (teamWebhookUrl) {
+    try {
+      await postToDiscord(teamWebhookUrl, buildDigestMessage(tasks, milestones, today));
+      console.log('週次進捗まとめ(チーム全体)をDiscordに投稿しました。');
+    } catch (err) {
+      hadError = true;
+      console.error('チーム全体の週次進捗まとめの投稿に失敗しました:', err);
+    }
+  } else {
+    console.log('チーム全体のDiscord Webhook URLが設定されていないため、チーム宛の投稿はスキップします。');
+  }
+
+  const membersWithWebhook = members.filter((m) => m.discordWebhookUrl);
+  if (membersWithWebhook.length === 0) {
+    console.log('個人のDiscord Webhook URLが設定されているメンバーがいないため、個人宛の投稿はスキップします。');
+  }
+  for (const member of membersWithWebhook) {
+    try {
+      await postToDiscord(member.discordWebhookUrl, buildPersonalDigestMessage(member, tasks, today));
+      console.log(`個人宛の進捗まとめを投稿しました: ${member.name}`);
+    } catch (err) {
+      hadError = true;
+      console.error(`個人宛の進捗まとめの投稿に失敗しました(${member.name}):`, err);
+    }
+  }
+
+  if (hadError) {
+    process.exit(1);
+  }
 }
 
 main().catch((err) => {

@@ -199,6 +199,7 @@ async function createMember(data) {
     name,
     roles: sanitizeStringList(data.roles),
     isAdmin: isBootstrap ? true : Boolean(data.isAdmin),
+    discordWebhookUrl: (data.discordWebhookUrl || '').trim(),
   };
 
   if (!isBootstrap) {
@@ -244,6 +245,7 @@ async function updateMember(id, data) {
     const payload = { isAdmin: willBeAdmin };
     if (data.name !== undefined) payload.name = String(data.name).trim();
     if (data.roles !== undefined) payload.roles = sanitizeStringList(data.roles);
+    if (data.discordWebhookUrl !== undefined) payload.discordWebhookUrl = String(data.discordWebhookUrl).trim();
 
     tx.update(ref, payload);
     if (nextAdminCount !== meta.adminCount || !metaSnap.exists()) {

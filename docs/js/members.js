@@ -206,6 +206,11 @@ function openMemberModal(container, ctx, member) {
             <label>役職(カンマ区切りで複数入力可)</label>
             <input type="text" name="roles" value="${escapeHtml(memberRoles(member).join(', '))}" placeholder="例: デザイン担当, 編集担当" />
           </div>
+          <div class="form-group">
+            <label>個人の進捗確認チャンネル Webhook URL(任意)</label>
+            <input type="url" name="discordWebhookUrl" value="${escapeHtml(member?.discordWebhookUrl || '')}" placeholder="https://discord.com/api/webhooks/..." />
+            <p class="form-hint">設定すると、このメンバー宛の担当タスク・進捗まとめが定期的にこのチャンネルへ届きます。</p>
+          </div>
           <div class="form-group form-checkbox">
             <label><input type="checkbox" name="isAdmin" ${member?.isAdmin ? 'checked' : ''} /> 管理者権限を付与する</label>
           </div>
@@ -232,6 +237,7 @@ function openMemberModal(container, ctx, member) {
     const payload = {
       name: form.get('name'),
       roles: form.get('roles'),
+      discordWebhookUrl: form.get('discordWebhookUrl'),
       isAdmin: form.get('isAdmin') === 'on',
     };
     try {
