@@ -154,29 +154,7 @@ function maybeSendBrowserNotification(urgentTasks, today) {
   }
 }
 
-async function maybeSendDiscordNotification(ctx, urgentTasks, today) {
-  if (urgentTasks.length === 0) return;
-  const webhookUrl = ctx.notificationSettings?.discordWebhookUrl;
-  if (!webhookUrl) return;
-
-  try {
-    const claimed = await ctx.api.claimDailyDiscordNotification(today);
-    if (!claimed) return;
-
-    const lines = urgentTasks.slice(0, 10).map((t) => `・${t.title}(締切: ${formatDate(t.endDate)})`);
-    const content = `【締切リマインド】3日以内に締切の未完了タスクが${urgentTasks.length}件あります\n${lines.join('\n')}`;
-
-    await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
-    });
-  } catch (err) {
-    // 通知に失敗しても画面表示には影響させない
-  }
-}
-
-// 既存の3日前デイリーリマインドとは別に、タスクごとに1回だけ
+// タスクごとに1回だけ
 // 「締切まで1週間を切った」通知を送る。
 async function maybeSendWeekBeforeDiscordNotification(ctx, targets, today) {
   const webhookUrl = ctx.notificationSettings?.discordWebhookUrl;
@@ -287,7 +265,6 @@ export function renderDashboard(container, ctx) {
 
   const urgentTasks = tasks.filter((t) => t.status !== '完了' && t.endDate && t.endDate <= addDays(today, 3));
   maybeSendBrowserNotification(urgentTasks, today);
-  maybeSendDiscordNotification(ctx, urgentTasks, today);
   maybeSendWeekBeforeDiscordNotification(
     ctx,
     upcomingTasks.filter((t) => !t.discordNotifiedWeekBefore),
