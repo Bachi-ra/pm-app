@@ -166,7 +166,7 @@ async function maybeSendWeekBeforeDiscordNotification(ctx, targets, today) {
       if (!claimed) continue;
 
       const daysLeft = daysBetween(today, task.endDate);
-      const content = `【1週間前通知】${task.title} の締切まであと${daysLeft}日です`;
+      const content = `【全体連絡】${task.title} の締切まであと${daysLeft}日です`;
 
       await fetch(webhookUrl, {
         method: 'POST',
