@@ -12,6 +12,7 @@ import {
   PRIORITY_LIST,
   VERSION_STATUS_LIST,
   memberRoles,
+  compareCategoryOrder,
 } from './utils.js';
 
 function roleBadge(role) {
@@ -26,17 +27,19 @@ const filterState = { assigneeRole: 'all', category: 'all', status: 'all', prior
 
 export function renderTasks(container, ctx) {
   const { members, tasks, currentMember, isAdmin } = ctx;
-  const categories = [...new Set(tasks.map((t) => t.category))].sort();
+  const categories = [...new Set(tasks.map((t) => t.category))].sort(compareCategoryOrder);
   const roleOptions = getRoleOptions(members);
 
-  const filtered = tasks.filter((t) => {
-    if (filterState.assigneeRole !== 'all' && t.assigneeRole !== filterState.assigneeRole) return false;
-    if (filterState.category !== 'all' && t.category !== filterState.category) return false;
-    if (filterState.status !== 'all' && t.status !== filterState.status) return false;
-    if (filterState.priority !== 'all' && t.priority !== filterState.priority) return false;
-    if (filterState.onlyMine && !isTaskOwner(t, currentMember)) return false;
-    return true;
-  });
+  const filtered = tasks
+    .filter((t) => {
+      if (filterState.assigneeRole !== 'all' && t.assigneeRole !== filterState.assigneeRole) return false;
+      if (filterState.category !== 'all' && t.category !== filterState.category) return false;
+      if (filterState.status !== 'all' && t.status !== filterState.status) return false;
+      if (filterState.priority !== 'all' && t.priority !== filterState.priority) return false;
+      if (filterState.onlyMine && !isTaskOwner(t, currentMember)) return false;
+      return true;
+    })
+    .sort((a, b) => compareCategoryOrder(a.category, b.category));
 
   container.innerHTML = `
     <div class="toolbar">

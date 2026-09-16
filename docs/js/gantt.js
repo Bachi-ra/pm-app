@@ -1,4 +1,4 @@
-import { escapeHtml, formatDate, todayIso, addDays, daysBetween, roleColor, STATUS_CLASS } from './utils.js';
+import { escapeHtml, formatDate, todayIso, addDays, daysBetween, roleColor, STATUS_CLASS, compareCategoryOrder } from './utils.js';
 import { exportGanttToExcel, exportScheduleToIcs } from './export.js';
 import { openTaskModal } from './tasks.js';
 
@@ -15,7 +15,7 @@ function isValidIsoDate(value) {
 
 export function renderGantt(container, ctx) {
   const { tasks, milestones, isAdmin } = ctx;
-  const categories = [...new Set(tasks.map((t) => t.category))].sort();
+  const categories = [...new Set(tasks.map((t) => t.category))].sort(compareCategoryOrder);
 
   container.innerHTML = `
     <datalist id="category-list">
@@ -114,6 +114,9 @@ export function buildCalendarHtml(tasks, milestones, monthStr, { allowCreate = f
     if (!isValidIsoDate(t.endDate)) continue;
     (tasksByDate[t.endDate] = tasksByDate[t.endDate] || []).push(t);
   }
+  for (const list of Object.values(tasksByDate)) {
+    list.sort((a, b) => compareCategoryOrder(a.category, b.category));
+  }
   const milestonesByDate = {};
   for (const ms of milestones) {
     if (!isValidIsoDate(ms.date)) continue;
@@ -186,7 +189,7 @@ export function buildGanttChart(tasks, milestones) {
   const totalDays = daysBetween(rangeStart, rangeEnd) + 1;
   const trackWidth = totalDays * DAY_WIDTH;
 
-  const categories = [...new Set(tasks.map((t) => t.category))];
+  const categories = [...new Set(tasks.map((t) => t.category))].sort(compareCategoryOrder);
   const weekendBg = buildWeekendGradient(rangeStart, totalDays);
 
   const scroll = document.createElement('div');

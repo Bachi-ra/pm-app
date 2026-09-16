@@ -162,6 +162,19 @@ export function versionStatusColor(status) {
   return VERSION_STATUS_COLORS[status] || VERSION_STATUS_COLORS['レビュー待ち'];
 }
 
+// カテゴリの表示順。ここに無いカテゴリは、この並びの後ろに
+// あいうえお順で表示される。
+export const CATEGORY_ORDER = ['プリプロダクション', 'プロダクション', 'ポストプロダクション'];
+
+function categorySortKey(category) {
+  const index = CATEGORY_ORDER.indexOf(category);
+  return index === -1 ? CATEGORY_ORDER.length : index;
+}
+
+export function compareCategoryOrder(a, b) {
+  return categorySortKey(a) - categorySortKey(b) || String(a || '').localeCompare(String(b || ''), 'ja');
+}
+
 export const ASSET_TYPE_LIST = ['BGM', 'SE', 'フォント', '画像', 'その他'];
 
 export const RENDER_STATUS_LIST = ['実行中', '完了', '中断'];
