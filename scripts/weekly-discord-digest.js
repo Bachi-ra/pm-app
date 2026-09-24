@@ -61,7 +61,10 @@ function memberRoles(member) {
   return [];
 }
 
+// 担当役職(または「全員」)が一致するか、担当メンバーとして個別に指名されているか
+// (docs/js/utils.js の isTaskAssignedToMember() と同じ判定)。
 function isAssignedToMember(task, member) {
+  if (Array.isArray(task.assigneeMemberIds) && task.assigneeMemberIds.includes(member.id)) return true;
   if (!task.assigneeRole) return false;
   if (task.assigneeRole === EVERYONE_ROLE) return true;
   return memberRoles(member).includes(task.assigneeRole);
@@ -175,7 +178,7 @@ async function main() {
 
   const tasks = tasksSnap.docs.map((d) => d.data());
   const milestones = milestonesSnap.docs.map((d) => d.data());
-  const members = membersSnap.docs.map((d) => d.data());
+  const members = membersSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
   const today = todayIso();
 
   let hadError = false;

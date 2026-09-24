@@ -7,9 +7,9 @@ import {
   roleColor,
   priorityColor,
   priorityRank,
-  EVERYONE_ROLE,
   memberRoles,
   groupByMemberRole,
+  isTaskAssignedToMember,
 } from './utils.js';
 import { buildGanttChart, buildCalendarHtml, shiftMonth } from './gantt.js';
 import { exportGanttToExcel, exportScheduleToIcs } from './export.js';
@@ -39,7 +39,7 @@ function scheduleWidgetShellHtml() {
 }
 
 function renderScheduleWidget(container, ctx) {
-  const { tasks, milestones } = ctx;
+  const { tasks, milestones, members } = ctx;
   const area = container.querySelector('#dash-schedule-area');
   if (!area) return;
   area.innerHTML = '';
@@ -67,7 +67,7 @@ function renderScheduleWidget(container, ctx) {
     area.innerHTML = '<p class="empty">タスクまたはマイルストーンを登録するとガントチャートが表示されます</p>';
     return;
   }
-  area.appendChild(buildGanttChart(tasks, milestones));
+  area.appendChild(buildGanttChart(tasks, milestones, members));
 }
 
 function wireScheduleWidget(container, ctx) {
@@ -108,12 +108,6 @@ function wireScheduleWidget(container, ctx) {
       alert(err.message);
     }
   });
-}
-
-function isAssignedToMember(task, member) {
-  if (!task.assigneeRole) return false;
-  if (task.assigneeRole === EVERYONE_ROLE) return true;
-  return memberRoles(member).includes(task.assigneeRole);
 }
 
 function roleBadge(role) {
@@ -272,7 +266,7 @@ export function renderDashboard(container, ctx) {
   );
 
   const workload = members.map((m) => {
-    const mine = tasks.filter((t) => isAssignedToMember(t, m));
+    const mine = tasks.filter((t) => isTaskAssignedToMember(t, m));
     const done = mine.filter((t) => t.status === '完了').length;
     const avg = mine.length
       ? Math.round(mine.reduce((sum, t) => sum + t.progress, 0) / mine.length)

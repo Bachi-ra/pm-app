@@ -552,6 +552,12 @@ textarea:focus {
   min-height: 1em;
 }
 
+.member-check-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
 .form-hint {
   color: var(--text-muted);
   font-size: 0.8rem;

@@ -1,4 +1,4 @@
-import { escapeHtml, formatDate, todayIso, addDays, daysBetween, roleColor, STATUS_CLASS, compareCategoryOrder } from './utils.js';
+import { escapeHtml, formatDate, todayIso, addDays, daysBetween, roleColor, STATUS_CLASS, compareCategoryOrder, taskAssigneeMembers } from './utils.js';
 import { exportGanttToExcel, exportScheduleToIcs } from './export.js';
 import { openTaskModal } from './tasks.js';
 
@@ -14,7 +14,7 @@ function isValidIsoDate(value) {
 }
 
 export function renderGantt(container, ctx) {
-  const { tasks, milestones, isAdmin } = ctx;
+  const { tasks, milestones, members, isAdmin } = ctx;
   const categories = [...new Set(tasks.map((t) => t.category))].sort(compareCategoryOrder);
 
   container.innerHTML = `
@@ -92,7 +92,7 @@ export function renderGantt(container, ctx) {
     return;
   }
 
-  area.appendChild(buildGanttChart(tasks, milestones));
+  area.appendChild(buildGanttChart(tasks, milestones, members));
 }
 
 export function shiftMonth(monthStr, delta) {
@@ -176,7 +176,7 @@ function wireCalendarNav(container, ctx) {
   });
 }
 
-export function buildGanttChart(tasks, milestones) {
+export function buildGanttChart(tasks, milestones, members = []) {
   const allDates = [
     ...tasks.flatMap((t) => [t.startDate, t.endDate]),
     ...milestones.map((m) => m.date),
@@ -234,6 +234,7 @@ export function buildGanttChart(tasks, milestones) {
         .map((depId) => tasks.find((t) => t.id === depId))
         .filter(Boolean)
         .map((dep) => escapeHtml(dep.title));
+      const assigneeNames = taskAssigneeMembers(task, members).map((m) => escapeHtml(m.name));
 
       const label = `<div class="gantt-label-cell">
         <div class="gantt-task-title" title="${escapeHtml(task.title)}">${escapeHtml(task.title)}</div>
@@ -242,6 +243,7 @@ export function buildGanttChart(tasks, milestones) {
             ? `<span class="badge" style="background:${roleColor(task.assigneeRole)}">${escapeHtml(task.assigneeRole)}</span>`
             : '未割当'
         }</div>
+        ${assigneeNames.length > 0 ? `<div class="gantt-task-assignee">担当: ${assigneeNames.join('、')}</div>` : ''}
         ${depNames.length > 0 ? `<div class="gantt-task-assignee">依存: ${depNames.join('、')}</div>` : ''}
       </div>`;
 

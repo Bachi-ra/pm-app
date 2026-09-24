@@ -289,6 +289,7 @@ async function createTask(data) {
     description: (data.description || '').trim(),
     category: (data.category || '未分類').trim(),
     assigneeRole: (data.assigneeRole || '').trim() || null,
+    assigneeMemberIds: sanitizeStringList(data.assigneeMemberIds),
     status,
     progress: status === '完了' ? 100 : clampProgress(data.progress, 0),
     startDate: data.startDate,
@@ -324,6 +325,7 @@ async function updateTask(id, data) {
   if (data.description !== undefined) payload.description = String(data.description).trim();
   if (data.category !== undefined) payload.category = String(data.category).trim() || '未分類';
   if (data.assigneeRole !== undefined) payload.assigneeRole = String(data.assigneeRole).trim() || null;
+  if (data.assigneeMemberIds !== undefined) payload.assigneeMemberIds = sanitizeStringList(data.assigneeMemberIds);
   if (data.startDate !== undefined) payload.startDate = data.startDate;
   if (data.endDate !== undefined) payload.endDate = data.endDate;
   if (data.checklist !== undefined) payload.checklist = sanitizeChecklist(data.checklist);

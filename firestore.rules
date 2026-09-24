@@ -53,10 +53,18 @@ service cloud.firestore {
       return role == '全員' || role in memberRoleList(myMember());
     }
 
-    // 指定タスクの担当役職が自分の役職(または「全員」)と一致するか。
+    // タスクの担当者が自分か。担当役職が自分の役職(または「全員」)と一致するか、
+    // 担当メンバー(assigneeMemberIds)として自分が指名されている場合に true。
+    // hasClaim() が成立している文脈でのみ呼ぶこと(claimedMemberId() を使うため)。
+    function isAssignedToMe(t) {
+      return hasAssignedRole(t.assigneeRole)
+        || ('assigneeMemberIds' in t && claimedMemberId() in t.assigneeMemberIds);
+    }
+
+    // 指定タスクの担当者が自分か(isAssignedToMe と同じ判定)。
     function isTaskOwner(taskId) {
       let t = get(/databases/$(database)/documents/tasks/$(taskId)).data;
-      return signedIn() && hasClaim() && hasAssignedRole(t.assigneeRole);
+      return signedIn() && hasClaim() && isAssignedToMe(t);
     }
 
     // 最初の管理者登録(または、このルール公開後の一度きりの移行)が完了したかどうかの印。
@@ -118,13 +126,14 @@ service cloud.firestore {
       allow create: if isAdmin();
       allow delete: if isAdmin();
 
-      // 担当役職が自分の役職(または「全員」)と一致するメンバーは、
-      // 状態(status)と進捗(progress)のみ更新できる。それ以外は管理者のみ。
+      // 担当者(担当役職が自分の役職または「全員」と一致、もしくは担当メンバーとして
+      // 個別に指名されたメンバー)は、状態(status)と進捗(progress)のみ更新できる。
+      // それ以外は管理者のみ。
       // ただしdiscordNotifiedWeekBefore(1週間前通知の送信済みフラグ)だけは
       // signedInなら誰でも更新できる(claimTaskWeekBeforeNotificationのため)。
       allow update: if isAdmin() || (
         signedIn() && hasClaim() &&
-        hasAssignedRole(resource.data.assigneeRole) &&
+        isAssignedToMe(resource.data) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'progress'])
       ) || (
         signedIn() &&

@@ -6,13 +6,13 @@ import {
   roleColor,
   priorityColor,
   versionStatusColor,
-  EVERYONE_ROLE,
   STATUS_LIST,
   STATUS_CLASS,
   PRIORITY_LIST,
   VERSION_STATUS_LIST,
-  memberRoles,
   compareCategoryOrder,
+  isTaskAssignedToMember,
+  taskAssigneeMembers,
 } from './utils.js';
 
 function roleBadge(role) {
@@ -77,7 +77,7 @@ export function renderTasks(container, ctx) {
               <th>タイトル</th><th>カテゴリ</th><th>担当役職</th><th>優先度</th><th>状態</th><th>進捗</th><th>期間</th><th></th>
             </tr></thead>
             <tbody>
-              ${filtered.map((t) => renderRow(t, tasks, currentMember, isAdmin)).join('')}
+              ${filtered.map((t) => renderRow(t, tasks, members, currentMember, isAdmin)).join('')}
             </tbody>
           </table></div>`
     }
@@ -158,14 +158,13 @@ export function renderTasks(container, ctx) {
 }
 
 function isTaskOwner(task, currentMember) {
-  if (!currentMember || !task.assigneeRole) return false;
-  if (task.assigneeRole === EVERYONE_ROLE) return true;
-  return memberRoles(currentMember).includes(task.assigneeRole);
+  return isTaskAssignedToMember(task, currentMember);
 }
 
-function renderRow(task, allTasks, currentMember, isAdmin) {
+function renderRow(task, allTasks, members, currentMember, isAdmin) {
   const isOwner = isTaskOwner(task, currentMember);
   const canQuickEdit = isOwner && !isAdmin;
+  const assigneeMembers = taskAssigneeMembers(task, members);
 
   let primaryActions;
   if (isAdmin) {
@@ -202,7 +201,10 @@ function renderRow(task, allTasks, currentMember, isAdmin) {
       ${hasIncompleteDependency ? '<span class="badge badge-warning">先行タスク未完了</span>' : ''}
     </td>
     <td>${escapeHtml(task.category)}</td>
-    <td>${roleBadge(task.assigneeRole)}</td>
+    <td>
+      ${roleBadge(task.assigneeRole)}
+      ${assigneeMembers.length > 0 ? `<div class="task-desc">担当: ${escapeHtml(assigneeMembers.map((m) => m.name).join('、'))}</div>` : ''}
+    </td>
     <td>${priorityBadge(task.priority || '中')}</td>
     <td><span class="badge ${STATUS_CLASS[task.status]}">${task.status}</span></td>
     <td><div class="progress-bar" title="${task.progress}%"><div class="progress-fill" style="width:${task.progress}%"></div></div></td>
@@ -292,6 +294,7 @@ export function openTaskModal(container, ctx, task, prefill = null) {
   const isEdit = Boolean(task);
   const checklist = (task?.checklist || []).map((item) => ({ ...item }));
   const dependsOn = task?.dependsOn ? [...task.dependsOn] : [];
+  const assigneeMemberIds = Array.isArray(task?.assigneeMemberIds) ? task.assigneeMemberIds : [];
   const otherTasks = tasks.filter((t) => t.id !== task?.id);
 
   root.innerHTML = `
@@ -318,6 +321,24 @@ export function openTaskModal(container, ctx, task, prefill = null) {
                 <option value="">未割当</option>
                 ${getRoleOptions(members).map((r) => `<option value="${escapeHtml(r)}" ${task?.assigneeRole === r ? 'selected' : ''}>${escapeHtml(r)}</option>`).join('')}
               </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>担当メンバー(任意・複数選択可。役職とは別に個別に指名できます)</label>
+            <div class="member-check-list">
+              ${
+                members.length === 0
+                  ? '<span class="empty">メンバーが登録されていません</span>'
+                  : members
+                      .slice()
+                      .sort((a, b) => a.name.localeCompare(b.name, 'ja'))
+                      .map(
+                        (m) => `<div class="form-checkbox">
+                <label><input type="checkbox" name="assigneeMemberIds" value="${m.id}" ${assigneeMemberIds.includes(m.id) ? 'checked' : ''} /> ${escapeHtml(m.name)}</label>
+              </div>`
+                      )
+                      .join('')
+              }
             </div>
           </div>
           <div class="form-row">
@@ -414,6 +435,7 @@ export function openTaskModal(container, ctx, task, prefill = null) {
       description: form.get('description'),
       category: form.get('category'),
       assigneeRole: form.get('assigneeRole') || null,
+      assigneeMemberIds: form.getAll('assigneeMemberIds'),
       startDate: form.get('startDate'),
       endDate: form.get('endDate'),
       status: form.get('status'),

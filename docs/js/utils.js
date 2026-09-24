@@ -70,6 +70,22 @@ export function memberRoles(member) {
   return [];
 }
 
+// タスクの担当者判定: 担当役職(または「全員」)が一致するメンバー、または
+// 担当メンバーとして個別に指名されたメンバー。
+export function isTaskAssignedToMember(task, member) {
+  if (!member) return false;
+  if (Array.isArray(task.assigneeMemberIds) && task.assigneeMemberIds.includes(member.id)) return true;
+  if (!task.assigneeRole) return false;
+  if (task.assigneeRole === EVERYONE_ROLE) return true;
+  return memberRoles(member).includes(task.assigneeRole);
+}
+
+// タスクに個別指名されたメンバー(存在しなくなったIDは無視する)。
+export function taskAssigneeMembers(task, members) {
+  const ids = Array.isArray(task.assigneeMemberIds) ? task.assigneeMemberIds : [];
+  return members.filter((m) => ids.includes(m.id));
+}
+
 export function getRoleOptions(members) {
   const roles = [...new Set(members.flatMap((m) => memberRoles(m)))].sort((a, b) => a.localeCompare(b, 'ja'));
   return [EVERYONE_ROLE, ...roles];
