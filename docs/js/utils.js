@@ -86,6 +86,21 @@ export function taskAssigneeMembers(task, members) {
   return members.filter((m) => ids.includes(m.id));
 }
 
+// タスクの担当役職の並び順。「全員」を先頭、ROLE_ORDERの役職がそれに続き、
+// それ以外の役職はあいうえお順、未割当は最後。
+function assigneeRoleSortKey(role) {
+  if (!role) return Infinity;
+  if (role === EVERYONE_ROLE) return -1;
+  const index = ROLE_ORDER.indexOf(role);
+  return index === -1 ? ROLE_ORDER.length : index;
+}
+
+export function compareAssigneeRoleOrder(a, b) {
+  const ak = assigneeRoleSortKey(a);
+  const bk = assigneeRoleSortKey(b);
+  return ak - bk || String(a || '').localeCompare(String(b || ''), 'ja');
+}
+
 export function getRoleOptions(members) {
   const roles = [...new Set(members.flatMap((m) => memberRoles(m)))].sort((a, b) => a.localeCompare(b, 'ja'));
   return [EVERYONE_ROLE, ...roles];

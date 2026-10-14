@@ -11,6 +11,7 @@ import {
   PRIORITY_LIST,
   VERSION_STATUS_LIST,
   compareCategoryOrder,
+  compareAssigneeRoleOrder,
   isTaskAssignedToMember,
   taskAssigneeMembers,
 } from './utils.js';
@@ -39,7 +40,12 @@ export function renderTasks(container, ctx) {
       if (filterState.onlyMine && !isTaskOwner(t, currentMember)) return false;
       return true;
     })
-    .sort((a, b) => compareCategoryOrder(a.category, b.category));
+    .sort(
+      (a, b) =>
+        compareCategoryOrder(a.category, b.category) ||
+        compareAssigneeRoleOrder(a.assigneeRole, b.assigneeRole) ||
+        (a.endDate || '').localeCompare(b.endDate || '')
+    );
 
   container.innerHTML = `
     <div class="toolbar">
