@@ -1,4 +1,4 @@
-import { escapeHtml, formatDate, todayIso, addDays, daysBetween, roleColor, STATUS_CLASS, compareCategoryOrder, taskAssigneeMembers } from './utils.js';
+import { escapeHtml, formatDate, todayIso, addDays, daysBetween, STATUS_CLASS, compareCategoryOrder, compareAssigneeRoleOrder, taskAssigneeMembers } from './utils.js';
 import { exportGanttToExcel, exportScheduleToIcs } from './export.js';
 import { openTaskModal } from './tasks.js';
 
@@ -189,7 +189,7 @@ export function buildGanttChart(tasks, milestones, members = []) {
   const totalDays = daysBetween(rangeStart, rangeEnd) + 1;
   const trackWidth = totalDays * DAY_WIDTH;
 
-  const categories = [...new Set(tasks.map((t) => t.category))].sort(compareCategoryOrder);
+  const roleGroups = [...new Set(tasks.map((t) => t.assigneeRole || ''))].sort(compareAssigneeRoleOrder);
   const weekendBg = buildWeekendGradient(rangeStart, totalDays);
 
   const scroll = document.createElement('div');
@@ -210,21 +210,21 @@ export function buildGanttChart(tasks, milestones, members = []) {
     )
   );
 
-  for (const category of categories) {
+  for (const role of roleGroups) {
     inner.appendChild(
       buildRow(
-        `<div class="gantt-label-cell category-label">${escapeHtml(category)}</div>`,
+        `<div class="gantt-label-cell category-label">${escapeHtml(role || '未割当')}</div>`,
         `<div class="gantt-row-track" style="width:${trackWidth}px;background-image:${weekendBg}"></div>`,
         trackWidth,
         'gantt-category-row'
       )
     );
 
-    const catTasks = tasks
-      .filter((t) => t.category === category && isValidIsoDate(t.startDate) && isValidIsoDate(t.endDate))
-      .sort((a, b) => a.startDate.localeCompare(b.startDate));
+    const roleTasks = tasks
+      .filter((t) => (t.assigneeRole || '') === role && isValidIsoDate(t.startDate) && isValidIsoDate(t.endDate))
+      .sort((a, b) => a.endDate.localeCompare(b.endDate));
 
-    for (const task of catTasks) {
+    for (const task of roleTasks) {
       const startOffset = daysBetween(rangeStart, task.startDate);
       const duration = daysBetween(task.startDate, task.endDate) + 1;
       const barLeft = startOffset * DAY_WIDTH;
@@ -238,11 +238,7 @@ export function buildGanttChart(tasks, milestones, members = []) {
 
       const label = `<div class="gantt-label-cell">
         <div class="gantt-task-title" title="${escapeHtml(task.title)}">${escapeHtml(task.title)}</div>
-        <div class="gantt-task-assignee">${
-          task.assigneeRole
-            ? `<span class="badge" style="background:${roleColor(task.assigneeRole)}">${escapeHtml(task.assigneeRole)}</span>`
-            : '未割当'
-        }</div>
+        <div class="gantt-task-assignee">${escapeHtml(task.category || '未分類')}</div>
         ${assigneeNames.length > 0 ? `<div class="gantt-task-assignee">担当: ${assigneeNames.join('、')}</div>` : ''}
         ${depNames.length > 0 ? `<div class="gantt-task-assignee">依存: ${depNames.join('、')}</div>` : ''}
       </div>`;
