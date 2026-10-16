@@ -254,7 +254,7 @@ export function buildGanttChart(tasks, milestones, members = []) {
     }
   }
 
-  if (categories.length === 0) {
+  if (roleGroups.length === 0) {
     inner.appendChild(
       buildRow(
         '<div class="gantt-label-cell category-label">タスク未登録</div>',
