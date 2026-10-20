@@ -235,6 +235,13 @@ service cloud.firestore {
         && (resource.data.memberId == claimedMemberId() || isAdmin());
     }
 
+    // レンダーのカット一覧: 追加・編集はメンバー全員可、削除はPMのみ。
+    match /renderCuts/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && hasClaim();
+      allow delete: if isAdmin();
+    }
+
     match /references/{id} {
       allow read: if signedIn();
 

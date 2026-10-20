@@ -1,6 +1,14 @@
 import { db, ensureSignedIn, currentUid } from './firebaseClient.js';
 import { deleteAttachment } from './storage.js';
-import { STATUS_LIST, PRIORITY_LIST, VERSION_STATUS_LIST, ASSET_TYPE_LIST, RENDER_STATUS_LIST } from './utils.js';
+import {
+  STATUS_LIST,
+  PRIORITY_LIST,
+  VERSION_STATUS_LIST,
+  ASSET_TYPE_LIST,
+  RENDER_STATUS_LIST,
+  RENDERABLE_LIST,
+  RENDER_CUT_STATUS_LIST,
+} from './utils.js';
 import {
   collection,
   getDocs,
@@ -611,6 +619,73 @@ async function deleteAsset(id) {
   return removeDocWithAttachment('assets', id);
 }
 
+// ---- render cuts (レンダーのカット一覧) ----
+
+const RENDER_CUT_TEXT_FIELDS = ['cutNumber', 'reason', 'assignee', 'config', 'cameraName', 'scenePath'];
+
+function toFrame(value) {
+  if (value === null || value === undefined || String(value).trim() === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+// partial=true のときは渡されたフィールドだけを正規化して返す(更新用)。
+function sanitizeRenderCut(data, { partial = false } = {}) {
+  const has = (key) => !partial || data[key] !== undefined;
+  const out = {};
+  for (const key of RENDER_CUT_TEXT_FIELDS) {
+    if (has(key)) out[key] = String(data[key] ?? '').trim();
+  }
+  if (has('renderable')) out.renderable = RENDERABLE_LIST.includes(data.renderable) ? data.renderable : '';
+  if (has('priority')) out.priority = PRIORITY_LIST.includes(data.priority) ? data.priority : '';
+  if (has('status')) out.status = RENDER_CUT_STATUS_LIST.includes(data.status) ? data.status : '未着手';
+  if (has('dueDate')) out.dueDate = /^\d{4}-\d{2}-\d{2}$/.test(data.dueDate || '') ? data.dueDate : '';
+  if (has('startFrame')) out.startFrame = toFrame(data.startFrame);
+  if (has('endFrame')) out.endFrame = toFrame(data.endFrame);
+  if (out.cutNumber !== undefined && !out.cutNumber) throw new Error('カット番号は必須です');
+  return out;
+}
+
+async function getRenderCuts() {
+  return getAll('renderCuts');
+}
+
+async function createRenderCut(data) {
+  return createDoc('renderCuts', sanitizeRenderCut(data));
+}
+
+async function updateRenderCut(id, data) {
+  return updateDocFields('renderCuts', id, sanitizeRenderCut(data, { partial: true }));
+}
+
+async function deleteRenderCut(id) {
+  return removeDoc('renderCuts', id);
+}
+
+// 同じカット番号が既にあればそのドキュメントを上書き、無ければ新規作成する。
+async function upsertRenderCuts(rows, existing) {
+  await ensureSignedIn();
+  const idByNumber = new Map(existing.map((c) => [c.cutNumber, c.id]));
+  const payloads = rows.map((row) => sanitizeRenderCut(row));
+  let created = 0;
+  let updated = 0;
+  for (let i = 0; i < payloads.length; i += 400) {
+    const batch = writeBatch(db);
+    for (const payload of payloads.slice(i, i + 400)) {
+      const existingId = idByNumber.get(payload.cutNumber);
+      if (existingId) {
+        batch.set(doc(db, 'renderCuts', existingId), payload);
+        updated += 1;
+      } else {
+        batch.set(doc(collection(db, 'renderCuts')), payload);
+        created += 1;
+      }
+    }
+    await batch.commit();
+  }
+  return { created, updated };
+}
+
 // ---- references (絵コンテ/参考資料ギャラリー) ----
 
 function sanitizeStringList(tags) {
@@ -678,6 +753,7 @@ const BACKUP_COLLECTIONS = [
   'taskComments',
   'versions',
   'progressSnapshots',
+  'renderCuts',
 ];
 
 async function exportAllData() {
@@ -788,6 +864,11 @@ export const api = {
   createAsset,
   updateAsset,
   deleteAsset,
+  getRenderCuts,
+  createRenderCut,
+  updateRenderCut,
+  deleteRenderCut,
+  upsertRenderCuts,
   getReferences,
   createReference,
   updateReference,

@@ -185,6 +185,15 @@ export function priorityRank(priority) {
   return PRIORITY_ORDER[priority] ?? 1;
 }
 
+// レンダーのカット一覧。可否・優先度は未設定('')も許す。
+export const RENDERABLE_LIST = ['可能', '不可能'];
+export const RENDER_CUT_STATUS_LIST = ['未着手', 'レンダリング中', 'やり直し', '完了'];
+
+// カット番号の自然順(C2 < C10、C023 < C023_plus1)。
+export function compareCutNumber(a, b) {
+  return String(a || '').localeCompare(String(b || ''), 'ja', { numeric: true });
+}
+
 export const VERSION_STATUS_LIST = ['レビュー待ち', '差し戻し', '承認'];
 
 const VERSION_STATUS_COLORS = { レビュー待ち: '#9ca3af', 差し戻し: '#dc2626', 承認: '#16a34a' };
