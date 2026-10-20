@@ -6,7 +6,7 @@ import { renderMembers } from './members.js';
 import { renderMemos } from './memos.js';
 import { renderLinks } from './links.js';
 import { renderMaterials } from './materials.js';
-import { renderRenderQueue } from './renderQueue.js';
+import { renderRenderCuts } from './renderCuts.js';
 import { initThemeToggle } from './theme.js';
 import { escapeHtml, memberRoles } from './utils.js';
 
@@ -22,7 +22,7 @@ const TABS = {
   materials: { label: '素材・資料', render: renderMaterials },
   links: { label: 'リンク集', render: renderLinks },
   memos: { label: 'メモ', render: renderMemos },
-  renderQueue: { label: 'レンダー', render: renderRenderQueue },
+  renderQueue: { label: 'レンダー', render: renderRenderCuts },
 };
 
 let data = {
@@ -33,7 +33,7 @@ let data = {
   links: [],
   assets: [],
   references: [],
-  renderJobs: [],
+  renderCuts: [],
   notificationSettings: { discordWebhookUrl: '' },
 };
 let currentMemberId = null;
@@ -49,7 +49,7 @@ function getCurrentMember() {
 }
 
 async function loadData() {
-  const [members, tasks, milestones, memos, links, assets, references, renderJobs, notificationSettings] =
+  const [members, tasks, milestones, memos, links, assets, references, renderCuts, notificationSettings] =
     await Promise.all([
       api.getMembers(),
       api.getTasks(),
@@ -58,10 +58,10 @@ async function loadData() {
       api.getLinks(),
       api.getAssets(),
       api.getReferences(),
-      api.getRenderJobs(),
+      api.getRenderCuts(),
       api.getNotificationSettings(),
     ]);
-  data = { members, tasks, milestones, memos, links, assets, references, renderJobs, notificationSettings };
+  data = { members, tasks, milestones, memos, links, assets, references, renderCuts, notificationSettings };
 }
 
 function buildCtx() {

@@ -5,7 +5,6 @@ import {
   PRIORITY_LIST,
   VERSION_STATUS_LIST,
   ASSET_TYPE_LIST,
-  RENDER_STATUS_LIST,
   RENDERABLE_LIST,
   RENDER_CUT_STATUS_LIST,
 } from './utils.js';
@@ -492,46 +491,6 @@ async function markMemoRead(memoId, memberId) {
   await updateDoc(doc(db, 'memos', memoId), { readBy: arrayUnion(memberId) });
 }
 
-// ---- render jobs (共有PC/レンダーキュー) ----
-
-async function getRenderJobs() {
-  return getAll('renderJobs');
-}
-
-async function createRenderJob(data) {
-  const pcName = (data.pcName || '').trim();
-  const title = (data.title || '').trim();
-  if (!pcName) throw new Error('PC名は必須です');
-  if (!title) throw new Error('内容は必須です');
-  if (!data.memberId) throw new Error('登録者が特定できません');
-
-  const payload = {
-    pcName,
-    memberId: data.memberId,
-    title,
-    startedAt: new Date().toISOString(),
-    estimatedEndAt: data.estimatedEndAt || null,
-    status: '実行中',
-    note: (data.note || '').trim(),
-  };
-  return createDoc('renderJobs', payload);
-}
-
-async function updateRenderJob(id, data) {
-  const payload = {};
-  if (data.status !== undefined) {
-    if (!RENDER_STATUS_LIST.includes(data.status)) throw new Error('不正なステータスです');
-    payload.status = data.status;
-  }
-  if (data.note !== undefined) payload.note = String(data.note).trim();
-  if (data.estimatedEndAt !== undefined) payload.estimatedEndAt = data.estimatedEndAt || null;
-  return updateDocFields('renderJobs', id, payload);
-}
-
-async function deleteRenderJob(id) {
-  return removeDoc('renderJobs', id);
-}
-
 // ---- links ----
 
 async function getLinks() {
@@ -852,10 +811,6 @@ export const api = {
   updateMemo,
   deleteMemo,
   markMemoRead,
-  getRenderJobs,
-  createRenderJob,
-  updateRenderJob,
-  deleteRenderJob,
   getLinks,
   createLink,
   updateLink,
