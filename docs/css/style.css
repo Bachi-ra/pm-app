@@ -11,6 +11,7 @@
   --todo: #9aa1ac;
   --doing: #3b5bc4;
   --done: #3f8b53;
+  --caution: #a06a12;
   --milestone: #6b5b95;
   --gantt-track-todo: #e5e7eb;
   --gantt-track-doing: #d7ddf3;
@@ -34,6 +35,7 @@
   --todo: #8b93a3;
   --doing: #5877e0;
   --done: #4caf6e;
+  --caution: #e0b24a;
   --milestone: #a696dd;
   --gantt-track-todo: #2d3340;
   --gantt-track-doing: #263258;
@@ -562,6 +564,96 @@ textarea:focus {
   color: var(--text-muted);
   font-size: 0.8rem;
   margin-top: 4px;
+}
+
+/* render cuts (レンダーのカット一覧) */
+.render-cut-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.render-cut-summary-item strong {
+  font-size: 1.15rem;
+  color: var(--text);
+  margin-left: 2px;
+}
+
+.render-cut-summary-item.cut-ok strong { color: var(--done); }
+.render-cut-summary-item.cut-ng strong { color: var(--danger); }
+.render-cut-summary-item.cut-doing strong { color: var(--doing); }
+
+.render-cut-table td {
+  vertical-align: middle;
+}
+
+.render-cut-table td.num {
+  text-align: right;
+}
+
+.render-cut-table .cut-divider {
+  border-left: 2px solid var(--border);
+}
+
+.render-cut-reason {
+  min-width: 160px;
+  white-space: pre-wrap;
+}
+
+.render-cut-path {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cut-select,
+.cut-badge {
+  --cut-color: var(--text-muted);
+  color: var(--cut-color);
+  background: color-mix(in srgb, var(--cut-color) 14%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--cut-color) 40%, transparent);
+  font-weight: 600;
+}
+
+.cut-select {
+  padding: 4px 8px;
+  font-size: 0.82rem;
+}
+
+.cut-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+}
+
+.cut-select option {
+  color: var(--text);
+  background: var(--bg-card);
+}
+
+.cut-ok { --cut-color: var(--done); }
+.cut-ng { --cut-color: var(--danger); }
+.cut-doing { --cut-color: var(--doing); }
+.cut-mid { --cut-color: var(--caution); }
+.cut-muted { --cut-color: var(--text-muted); }
+
+#cut-import-text {
+  width: 100%;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
+.render-cut-import-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.85rem;
 }
 
 .inline-form {
