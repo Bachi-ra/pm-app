@@ -598,8 +598,10 @@ textarea:focus {
   border-left: 2px solid var(--border);
 }
 
-.render-cut-reason {
+/* .data-table td の nowrap より優先させ、理由の改行・折り返しを表示する */
+.render-cut-table td.render-cut-reason {
   min-width: 160px;
+  max-width: 280px;
   white-space: pre-wrap;
 }
 

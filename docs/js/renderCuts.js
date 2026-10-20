@@ -97,6 +97,10 @@ function importPanelHtml() {
 
 export function renderRenderCuts(container, ctx) {
   const { renderCuts, isAdmin, currentMember } = ctx;
+  if (ctx.renderCutsUnavailable) {
+    container.innerHTML = `<p class="empty">カット一覧を読み込めませんでした。管理者は、Firestoreのルールが最新の内容で公開されているか確認してください(README「3. セキュリティルールを設定」)。</p>`;
+    return;
+  }
   const canEdit = Boolean(currentMember);
   const sorted = renderCuts.slice().sort((a, b) => compareCutNumber(a.cutNumber, b.cutNumber));
   const visible = statusFilter === 'all' ? sorted : sorted.filter((c) => (c.status || '未着手') === statusFilter);

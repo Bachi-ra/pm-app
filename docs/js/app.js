@@ -58,10 +58,25 @@ async function loadData() {
       api.getLinks(),
       api.getAssets(),
       api.getReferences(),
-      api.getRenderCuts(),
+      // ルール未公開などでカット一覧だけ読めなくても、サイト全体は表示できるようにする
+      api.getRenderCuts().catch((err) => {
+        console.warn('カット一覧の読み込みに失敗しました', err);
+        return null;
+      }),
       api.getNotificationSettings(),
     ]);
-  data = { members, tasks, milestones, memos, links, assets, references, renderCuts, notificationSettings };
+  data = {
+    members,
+    tasks,
+    milestones,
+    memos,
+    links,
+    assets,
+    references,
+    renderCuts: renderCuts || [],
+    renderCutsUnavailable: renderCuts === null,
+    notificationSettings,
+  };
 }
 
 function buildCtx() {
